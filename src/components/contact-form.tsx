@@ -55,7 +55,6 @@ export function ContactForm({
           placeholder: field.placeholder,
           "aria-invalid": error ? true : undefined,
           "aria-describedby": error ? `${id}-error` : undefined,
-          className: "bg-background",
         };
         return (
           <div key={field.name} className="flex flex-col gap-2">
@@ -80,7 +79,6 @@ export function ContactForm({
                 required={field.required}
                 autoFocus={field.name === "name"}
                 autoComplete="off"
-                className="h-10 bg-background"
               />
             )}
             {error && (
@@ -98,7 +96,7 @@ export function ContactForm({
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 pt-1">
         <Button type="submit" size="lg" disabled={pending}>
           {pending ? "Сохраняю…" : submitLabel}
         </Button>

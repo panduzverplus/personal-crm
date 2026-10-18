@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { BigLetter } from "@/components/big-letter";
 import { Button } from "@/components/ui/button";
 
 export default function ErrorPage({
@@ -15,8 +16,9 @@ export default function ErrorPage({
   }, [error]);
 
   return (
-    <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed bg-background px-6 py-12 text-center">
-      <h1 className="text-xl font-semibold">Что-то пошло не так</h1>
+    <div className="flex flex-col items-center gap-5 rounded-card border px-6 py-12 text-center">
+      <BigLetter />
+      <h1 className="text-h2 font-light">Что-то пошло не так</h1>
       <p className="text-muted-foreground">
         Не получилось загрузить данные. Проверьте, что база данных запущена, и
         попробуйте ещё раз.

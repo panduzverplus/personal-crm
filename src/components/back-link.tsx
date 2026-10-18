@@ -11,7 +11,7 @@ export function BackLink({
   return (
     <Link
       href={href}
-      className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      className="flex w-fit items-center gap-1.5 font-heading text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
     >
       <ArrowLeftIcon aria-hidden className="size-4" />
       {children}

@@ -4,127 +4,138 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Design tokens. Palette, fonts, type scale and radii repeat the landing
+ * (personal-crm-landing, src/styles/tokens.css), so the app and the landing look the same.
+ * Colors, fonts, type sizes and radii are defined only here;
+ * components use the Tailwind utilities generated from these variables.
+ */
+
+@theme {
+  /* Only the palette below is available, Tailwind's default colors are dropped */
+  --color-*: initial;
+
+  /* Landing palette */
+  --color-peach: #e3c1aa;
+  --color-ink: #262626;
+  /* "accent" on the landing: the big letter "Ч" */
+  --color-brand: oklch(0.62 0.22 28);
+  --color-search: #eef0ea;
+  --color-search-icon: #1b2a22;
+  --color-avatar: #ca885b;
+  --color-skeleton: #d3a484;
+
+  /* App-only shades of the same palette */
+  /* Secondary text: 5:1 contrast on peach */
+  --color-ink-muted: #5c4a3e;
+  /* Darker brand red, readable as text on peach */
+  --color-error: oklch(0.47 0.19 28);
+
+  /* Semantic colors used by shadcn/ui components */
+  --color-background: var(--color-peach);
+  --color-foreground: var(--color-ink);
+  --color-card: var(--color-peach);
+  --color-card-foreground: var(--color-ink);
+  --color-popover: var(--color-peach);
+  --color-popover-foreground: var(--color-ink);
+  --color-primary: var(--color-ink);
+  --color-primary-foreground: var(--color-peach);
+  --color-secondary: var(--color-search);
+  --color-secondary-foreground: var(--color-ink);
+  /* Hover and selection background: peach a shade darker */
+  --color-muted: color-mix(in oklab, var(--color-ink) 7%, var(--color-peach));
+  --color-muted-foreground: var(--color-ink-muted);
+  --color-accent: var(--color-muted);
+  --color-accent-foreground: var(--color-ink);
+  --color-destructive: var(--color-error);
+  /* All lines are ink, as on the landing */
+  --color-border: var(--color-ink);
+  /* Text fields look like the search field on the landing */
+  --color-input: var(--color-search);
+  --color-ring: var(--color-ink);
+
+  /* Radii */
+  --radius-card: 24px;
+  --radius-field: 14px;
+  --radius-sm: 8px;
+  --radius-md: 11px;
+  --radius-lg: var(--radius-field);
+  --radius-xl: 20px;
+
+  /* Type scale, mobile values. Desktop values are set below. */
+
+  /* "Чигабугадага" in the header */
+  --text-logo: 15px;
+  --text-logo--letter-spacing: -0.01em;
+
+  /* "ЛИЧНЫЕ КОНТАКТЫ" in the header */
+  --text-label: 11px;
+  --text-label--letter-spacing: 0.06em;
+
+  /* Small monospace captions: counters, dates, field names in the contact card */
+  --text-meta: 11px;
+  --text-meta--line-height: 1.4;
+  --text-meta--letter-spacing: 0.06em;
+
+  /* Page titles: section headings of the landing */
+  --text-h1: 34px;
+  --text-h1--line-height: 1;
+  --text-h1--letter-spacing: -0.04em;
+
+  --text-h2: 24px;
+  --text-h2--line-height: 1.1;
+  --text-h2--letter-spacing: -0.03em;
+
+  /* Big letter "Ч" on the empty list and error pages */
+  --text-letter: 96px;
+  --text-letter--line-height: 0.8;
+  --text-letter--letter-spacing: -0.06em;
+
+  --text-button: 15px;
+}
+
+/* Font files and the --font-onest etc. variables come from next/font (src/app/layout.tsx) */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Body text: the landing shows the app UI in Onest ("font-ui" there) */
+  --font-sans: var(--font-onest);
+  /* Headings, logo and buttons: the landing's main font ("font-sans" there) */
+  --font-heading: var(--font-geologica);
+  --font-display: var(--font-unbounded);
+  --font-mono: var(--font-ibm-plex-mono);
 }
 
+/* Desktop values */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+  @variant md {
+    --text-logo: 18px;
+    --text-label: 16px;
+    --text-meta: 12px;
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+    --text-h1: 56px;
+    --text-h1--letter-spacing: -0.045em;
+
+    --text-h2: 32px;
+
+    --text-letter: 120px;
+
+    --radius-card: 28px;
+  }
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background text-foreground;
   }
-  html {
-    @apply font-sans;
+  h1,
+  h2,
+  h3 {
+    @apply font-heading;
+  }
+  /* Focus outline as on the landing */
+  a:focus-visible {
+    @apply outline-2 outline-offset-3;
   }
 }

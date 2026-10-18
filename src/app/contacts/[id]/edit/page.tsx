@@ -8,7 +8,7 @@ import { contactFormFrom } from "@/lib/contact-form";
 import { getContact, parseContactId } from "@/lib/contacts";
 
 export const metadata: Metadata = {
-  title: "Изменить контакт — Личная CRM",
+  title: "Изменить контакт",
 };
 
 export default function EditContactPage({
@@ -41,10 +41,8 @@ async function EditContact({
   return (
     <>
       <BackLink href={`/contacts/${contact.id}`}>К карточке контакта</BackLink>
-      <div className="rounded-xl border bg-card p-5 sm:p-6">
-        <h1 className="mb-5 text-2xl font-semibold tracking-tight">
-          Изменить контакт
-        </h1>
+      <div className="rounded-card border p-5 md:p-7">
+        <h1 className="mb-6 text-h1 font-light md:mb-8">Изменить контакт</h1>
         <ContactForm
           action={updateContact.bind(null, contact.id)}
           initialState={contactFormFrom(contact)}
@@ -59,13 +57,13 @@ async function EditContact({
 function EditFormSkeleton() {
   return (
     <div className="flex flex-col gap-6" aria-busy="true">
-      <span className="h-4 w-36 animate-pulse rounded bg-muted" />
-      <div className="flex flex-col gap-5 rounded-xl border bg-card p-6">
-        <span className="h-7 w-56 animate-pulse rounded bg-muted" />
+      <span className="h-4 w-36 animate-pulse rounded-full bg-skeleton/60" />
+      <div className="flex flex-col gap-5 rounded-card border p-5 md:p-7">
+        <span className="h-8 w-56 animate-pulse rounded-full bg-skeleton/60" />
         {Array.from({ length: 5 }, (_, index) => (
           <div key={index} className="flex flex-col gap-2">
-            <span className="h-4 w-28 animate-pulse rounded bg-muted" />
-            <span className="h-10 w-full animate-pulse rounded-lg bg-muted" />
+            <span className="h-3 w-28 animate-pulse rounded-full bg-skeleton/60" />
+            <span className="h-11 w-full animate-pulse rounded-field bg-input" />
           </div>
         ))}
       </div>

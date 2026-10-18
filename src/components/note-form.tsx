@@ -30,7 +30,6 @@ export function NoteForm({
         placeholder="О чём поговорили, о чём договорились…"
         aria-invalid={state.status === "error" ? true : undefined}
         aria-describedby={state.status === "error" ? "note-body-error" : undefined}
-        className="bg-background"
         onKeyDown={(event) => {
           if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
             event.preventDefault();
@@ -51,14 +50,14 @@ export function NoteForm({
           <p
             key={state.savedAt}
             role="status"
-            className="flex items-center gap-1.5 text-sm text-emerald-700"
+            className="flex items-center gap-1.5 text-sm"
           >
             <CircleCheckIcon aria-hidden className="size-4" />
             Заметка сохранена
           </p>
         )}
         {state.status === "idle" && (
-          <p className="hidden text-xs text-muted-foreground sm:block">
+          <p className="hidden font-mono text-meta text-muted-foreground uppercase sm:block">
             Ctrl + Enter — сохранить
           </p>
         )}

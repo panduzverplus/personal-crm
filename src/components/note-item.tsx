@@ -1,6 +1,5 @@
 "use client";
 
-import { PencilIcon } from "lucide-react";
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -33,9 +32,9 @@ export function NoteItem({
   const [editing, setEditing] = useState(false);
 
   return (
-    <li className="rounded-xl border bg-card p-4">
-      <div className="flex min-h-6 items-start justify-between gap-2">
-        <p className="text-xs text-muted-foreground">
+    <li className="border-t py-4 last:border-b md:py-5">
+      <div className="flex min-h-7 items-start justify-between gap-2">
+        <p className="pt-1 font-mono text-meta text-muted-foreground uppercase">
           <time dateTime={createdAt}>{createdLabel}</time>
           {updatedAt && updatedLabel && (
             <>
@@ -48,13 +47,12 @@ export function NoteItem({
         </p>
         {!editing && (
           <Button
-            variant="ghost"
+            variant="outline"
             size="xs"
-            className="-mt-1 -mr-1 shrink-0 text-muted-foreground"
+            className="shrink-0"
             aria-label={`Изменить заметку от ${createdLabel}`}
             onClick={() => setEditing(true)}
           >
-            <PencilIcon data-icon="inline-start" />
             Изменить
           </Button>
         )}
@@ -68,7 +66,7 @@ export function NoteItem({
           onClose={() => setEditing(false)}
         />
       ) : (
-        <p className="mt-1 break-words whitespace-pre-wrap">{body}</p>
+        <p className="mt-2 break-words whitespace-pre-wrap">{body}</p>
       )}
     </li>
   );
@@ -109,7 +107,6 @@ function NoteEditor({
         autoFocus
         aria-invalid={state.status === "error" ? true : undefined}
         aria-describedby={state.status === "error" ? errorId : undefined}
-        className="bg-background"
         onFocus={(event) => {
           // Put the cursor at the end of the text, ready to continue writing.
           const end = event.currentTarget.value.length;

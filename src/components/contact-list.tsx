@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { CircleCheckIcon, UserPlusIcon } from "lucide-react";
+import { CircleCheckIcon, PlusIcon } from "lucide-react";
+import { BigLetter } from "@/components/big-letter";
 import { ContactAvatar } from "@/components/contact-avatar";
 import { ScrollIntoView } from "@/components/scroll-into-view";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { buttonVariants } from "@/components/ui/button";
+import { ButtonBadge, buttonVariants } from "@/components/ui/button";
 import { searchContacts, type ContactListItem } from "@/lib/contacts";
 import { pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -33,13 +34,16 @@ export async function ContactList({
 
   if (total === 0) {
     return (
-      <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed bg-background px-6 py-12 text-center">
+      <div className="flex flex-col items-center gap-5 rounded-card border px-6 py-12 text-center">
+        <BigLetter />
         <p className="text-muted-foreground">
           Пока нет ни одного контакта.
         </p>
         <Link href="/contacts/new" className={cn(buttonVariants())}>
-          <UserPlusIcon data-icon="inline-start" />
           Добавить первый контакт
+          <ButtonBadge>
+            <PlusIcon />
+          </ButtonBadge>
         </Link>
       </div>
     );
@@ -49,10 +53,10 @@ export async function ContactList({
     <div className="flex flex-col gap-3">
       {added && (
         <>
-          <Alert className="border-emerald-200 bg-emerald-50 text-emerald-900">
+          <Alert variant="success">
             <CircleCheckIcon />
             <AlertTitle>Контакт «{added.name}» добавлен</AlertTitle>
-            <AlertDescription className="text-emerald-900/80">
+            <AlertDescription>
               Он подсвечен в списке.{" "}
               <Link href={`/contacts/${added.id}`}>Открыть карточку</Link>
             </AlertDescription>
@@ -61,18 +65,22 @@ export async function ContactList({
         </>
       )}
 
-      <p className="text-sm text-muted-foreground" aria-live="polite">
+      <p
+        className="font-mono text-meta text-muted-foreground uppercase"
+        aria-live="polite"
+      >
         {query
           ? `Найдено: ${pluralize(items.length, CONTACT_FORMS)} из ${total.toLocaleString("ru-RU")}`
           : `Всего ${pluralize(total, CONTACT_FORMS)}`}
       </p>
 
       {items.length === 0 ? (
-        <div className="rounded-xl border border-dashed bg-background px-6 py-10 text-center text-muted-foreground">
+        <div className="rounded-card border px-6 py-10 text-center text-muted-foreground">
           По запросу «{query}» никого не нашлось.
         </div>
       ) : (
-        <ul className="divide-y overflow-hidden rounded-xl border bg-background">
+        // Frame and light dividers as in the app preview on the landing
+        <ul className="divide-y divide-search overflow-hidden rounded-card border p-1.5 md:p-2">
           {items.map((contact) => (
             <ContactRow
               key={contact.id}
@@ -96,15 +104,15 @@ function ContactRow({
   return (
     <li
       id={`contact-${contact.id}`}
-      className={cn(highlighted && "bg-emerald-50 ring-2 ring-emerald-300 ring-inset")}
+      className={cn(highlighted && "rounded-field bg-muted ring-2 ring-ring ring-inset")}
     >
       <Link
         href={`/contacts/${contact.id}`}
-        className="flex items-center gap-3 px-4 py-3 transition-colors outline-none hover:bg-muted/60 focus-visible:bg-muted/60"
+        className="flex items-center gap-3 rounded-field px-3 py-3 transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <ContactAvatar id={contact.id} name={contact.name} />
+        <ContactAvatar name={contact.name} />
         <div className="min-w-0 flex-1">
-          <div className="truncate font-medium">{contact.name}</div>
+          <div className="truncate font-semibold">{contact.name}</div>
           {contact.about && (
             <div className="truncate text-sm text-muted-foreground">
               {contact.about}
@@ -124,14 +132,15 @@ function ContactRow({
 export function ContactListSkeleton() {
   return (
     <div className="flex flex-col gap-3" aria-busy="true">
-      <div className="h-5 w-32 animate-pulse rounded bg-muted" />
-      <ul className="divide-y overflow-hidden rounded-xl border bg-background">
+      <div className="h-4 w-40 animate-pulse rounded-full bg-skeleton/60" />
+      {/* Same placeholder rows as in the app preview on the landing */}
+      <ul className="divide-y divide-search overflow-hidden rounded-card border p-1.5 md:p-2">
         {Array.from({ length: 8 }, (_, index) => (
-          <li key={index} className="flex items-center gap-3 px-4 py-3">
-            <span className="size-10 animate-pulse rounded-full bg-muted" />
+          <li key={index} className="flex items-center gap-3 px-3 py-3">
+            <span className="size-11 animate-pulse rounded-full bg-avatar/50" />
             <div className="flex flex-1 flex-col gap-2">
-              <span className="h-4 w-40 animate-pulse rounded bg-muted" />
-              <span className="h-3 w-56 animate-pulse rounded bg-muted" />
+              <span className="h-2.5 w-40 animate-pulse rounded-full bg-skeleton/60" />
+              <span className="h-2 w-56 animate-pulse rounded-full bg-skeleton/60" />
             </div>
           </li>
         ))}
