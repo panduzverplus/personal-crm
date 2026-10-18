@@ -29,11 +29,19 @@ export default function ContactsPage({ searchParams }: PageProps<"/">) {
         </Link>
       </div>
 
-      <Suspense fallback={<ContactSearchFallback />}>
+      {/*
+        One boundary for the search and the list: React reveals streamed boundaries
+        at most once per 300 ms, so a separate list boundary showed up 300 ms late.
+      */}
+      <Suspense
+        fallback={
+          <>
+            <ContactSearchFallback />
+            <ContactListSkeleton />
+          </>
+        }
+      >
         <ContactSearch searchParams={searchParams} />
-      </Suspense>
-
-      <Suspense fallback={<ContactListSkeleton />}>
         <ContactList searchParams={searchParams} />
       </Suspense>
     </div>

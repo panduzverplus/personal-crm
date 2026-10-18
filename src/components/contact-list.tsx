@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CircleCheckIcon, PlusIcon } from "lucide-react";
 import { BigLetter } from "@/components/big-letter";
 import { ContactAvatar } from "@/components/contact-avatar";
+import { LinkList } from "@/components/link-list";
 import { ScrollIntoView } from "@/components/scroll-into-view";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ButtonBadge, buttonVariants } from "@/components/ui/button";
@@ -80,7 +81,7 @@ export async function ContactList({
         </div>
       ) : (
         // Frame and light dividers as in the app preview on the landing
-        <ul className="divide-y divide-search overflow-hidden rounded-card border p-1.5 md:p-2">
+        <LinkList className="divide-y divide-search overflow-hidden rounded-card border p-1.5 md:p-2">
           {items.map((contact) => (
             <ContactRow
               key={contact.id}
@@ -88,7 +89,7 @@ export async function ContactList({
               highlighted={contact.id === added?.id}
             />
           ))}
-        </ul>
+        </LinkList>
       )}
     </div>
   );
@@ -106,7 +107,8 @@ function ContactRow({
       id={`contact-${contact.id}`}
       className={cn(highlighted && "rounded-field bg-muted ring-2 ring-ring ring-inset")}
     >
-      <Link
+      {/* A plain <a>: LinkList opens it without a page reload. */}
+      <a
         href={`/contacts/${contact.id}`}
         className="flex items-center gap-3 rounded-field px-3 py-3 transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
       >
@@ -124,7 +126,7 @@ function ContactRow({
           {contact.phone && <div className="tabular-nums">{contact.phone}</div>}
           {contact.email && <div className="truncate">{contact.email}</div>}
         </div>
-      </Link>
+      </a>
     </li>
   );
 }
