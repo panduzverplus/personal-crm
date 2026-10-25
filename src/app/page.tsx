@@ -6,6 +6,7 @@ import {
   ContactSearch,
   ContactSearchFallback,
 } from "@/components/contact-search";
+import { KeepInTouch } from "@/components/keep-in-touch";
 import { ButtonBadge, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -30,8 +31,8 @@ export default function ContactsPage({ searchParams }: PageProps<"/">) {
       </div>
 
       {/*
-        One boundary for the search and the list: React reveals streamed boundaries
-        at most once per 300 ms, so a separate list boundary showed up 300 ms late.
+        One boundary for the "Пора связаться" block, the search and the list: React reveals
+        streamed boundaries at most once per 300 ms, so a separate boundary showed up 300 ms late.
       */}
       <Suspense
         fallback={
@@ -41,6 +42,7 @@ export default function ContactsPage({ searchParams }: PageProps<"/">) {
           </>
         }
       >
+        <KeepInTouch />
         <ContactSearch searchParams={searchParams} />
         <ContactList searchParams={searchParams} />
       </Suspense>

@@ -13,6 +13,12 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { getContactWithNotes, parseContactId } from "@/lib/contacts";
 import { formatDate, formatDateTime, pluralize } from "@/lib/format";
+import {
+  dueDate,
+  frequencyTitle,
+  isOverdue,
+  type ContactFrequency,
+} from "@/lib/keep-in-touch";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -111,6 +117,14 @@ async function ContactCard({
               </a>
             )}
           </Detail>
+          <Detail label="Как часто общаться" wide>
+            {contact.contactFrequency &&
+              keepInTouchStatus(
+                contact.contactFrequency,
+                // Notes come newest first; with no notes, count from when the contact was added.
+                notes[0]?.createdAt ?? contact.createdAt,
+              )}
+          </Detail>
         </dl>
 
         <p className="font-mono text-meta text-muted-foreground uppercase">
@@ -158,6 +172,15 @@ async function ContactCard({
       </section>
     </>
   );
+}
+
+/** E.g. "Раз в месяц · связаться до 3 ноября 2026 г." or "Раз в месяц · пора связаться". */
+function keepInTouchStatus(frequency: ContactFrequency, lastContact: Date) {
+  const due = dueDate(lastContact, frequency);
+  const status = isOverdue(due, new Date())
+    ? "пора связаться"
+    : `связаться до ${formatDate(due)}`;
+  return `${frequencyTitle(frequency)} · ${status}`;
 }
 
 function Detail({

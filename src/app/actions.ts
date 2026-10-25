@@ -146,6 +146,8 @@ export async function addNote(
     };
   }
 
+  // A new note restarts the keep-in-touch due day, so the home page block changes too.
+  revalidatePath("/");
   revalidatePath(`/contacts/${contactId}`);
   return { status: "saved", body: "", savedAt: Date.now() };
 }

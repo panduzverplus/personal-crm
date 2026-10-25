@@ -1,9 +1,19 @@
 import "server-only";
-import { and, count, desc, eq, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  isNotNull,
+  max,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { connection } from "next/server";
 import { db } from "@/db";
 import { contacts, notes, type NewContact } from "@/db/schema";
 import type { ContactInput } from "@/lib/contact-form";
+import { dueDate, isOverdue } from "@/lib/keep-in-touch";
 
 /** Lowercases and treats "ё" as "е", so "Алена" also finds "Алёна". */
 function normalizeForSearch(value: string) {
@@ -53,6 +63,45 @@ export async function searchContacts(query: string) {
 export type ContactListItem = Awaited<
   ReturnType<typeof searchContacts>
 >["items"][number];
+
+/**
+ * Contacts with a frequency whose due day has passed: the most overdue first,
+ * the same due day by name. The due day counts from the latest note, or from
+ * when the contact was added if it has no notes.
+ */
+export async function getOverdueContacts() {
+  await connection();
+
+  const rows = await db
+    .select({
+      id: contacts.id,
+      name: contacts.name,
+      frequency: contacts.contactFrequency,
+      createdAt: contacts.createdAt,
+      // Only the creation time counts: editing an old note does not reset the due day.
+      lastNoteAt: max(notes.createdAt),
+    })
+    .from(contacts)
+    .leftJoin(notes, eq(notes.contactId, contacts.id))
+    .where(isNotNull(contacts.contactFrequency))
+    .groupBy(contacts.id);
+
+  const today = new Date();
+  return rows
+    .flatMap(({ frequency, createdAt, ...contact }) => {
+      if (!frequency) return [];
+      const due = dueDate(contact.lastNoteAt ?? createdAt, frequency);
+      return isOverdue(due, today) ? [{ ...contact, frequency, due }] : [];
+    })
+    .sort(
+      (a, b) =>
+        a.due.getTime() - b.due.getTime() || a.name.localeCompare(b.name, "ru"),
+    );
+}
+
+export type OverdueContact = Awaited<
+  ReturnType<typeof getOverdueContacts>
+>[number];
 
 /** Turns the `[id]` URL segment into a contact id, or null if it is not a valid id. */
 export function parseContactId(rawId: string) {

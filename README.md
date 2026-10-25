@@ -23,6 +23,7 @@
 - Node.js 24
 - pnpm
 - Docker Desktop (в нём работает база данных)
+- OpenSpec — для работы над требованиями фич: `npm install -g @fission-ai/openspec@latest`
 
 ## Настройки
 
@@ -88,6 +89,8 @@ pnpm start
 - `src/db` — схема таблиц, подключение, применение миграций на сервере (`migrate.ts`), генератор тестовых данных
 - `src/app/health/route.ts` — адрес `/health`: отвечает 200, если приложение работает и достаёт до базы
 - `drizzle/` — миграции базы
+- `openspec/` — требования фич (OpenSpec, тексты на русском): действующие — в `specs/`, новые и в работе — в `changes/`,
+  настройки — в `config.yaml`. Команды для Claude Code — `/opsx:propose`, `/opsx:apply`, `/opsx:archive` и другие в `.claude/commands/opsx/`
 - `Dockerfile` — образ приложения; его собирает GitHub Actions
 - `.github/workflows/deploy.yml` и `deploy/` — автовыкатка на сервер
 - `deploy/server/` — подготовка сервера: скрипт, настройки nginx и Docker, страница-заглушка
