@@ -104,6 +104,15 @@ export async function updateContactById(id: number, values: ContactInput) {
   return rows.length > 0;
 }
 
+/** Deletes the contact with all its notes; returns its name, or null when it does not exist. */
+export async function deleteContactById(id: number) {
+  const [row] = await db
+    .delete(contacts)
+    .where(eq(contacts.id, id))
+    .returning({ name: contacts.name });
+  return row?.name ?? null;
+}
+
 /** Returns false when the contact does not exist. */
 export async function insertNote(contactId: number, body: string) {
   const [contact] = await db

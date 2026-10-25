@@ -3,9 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 import { CircleCheckIcon } from "lucide-react";
-import { addNote, updateNote } from "@/app/actions";
+import { addNote, deleteContact, updateNote } from "@/app/actions";
 import { BackLink } from "@/components/back-link";
 import { ContactAvatar } from "@/components/contact-avatar";
+import { DeleteContactButton } from "@/components/delete-contact-button";
 import { NoteForm } from "@/components/note-form";
 import { NoteItem } from "@/components/note-item";
 import { Alert, AlertTitle } from "@/components/ui/alert";
@@ -72,12 +73,18 @@ async function ContactCard({
               <p className="mt-2 text-muted-foreground">{contact.about}</p>
             )}
           </div>
-          <Link
-            href={`/contacts/${contact.id}/edit`}
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            Изменить
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/contacts/${contact.id}/edit`}
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              Изменить
+            </Link>
+            <DeleteContactButton
+              contactName={contact.name}
+              action={deleteContact.bind(null, contact.id)}
+            />
+          </div>
         </div>
 
         <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">

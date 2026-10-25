@@ -10,9 +10,11 @@ import {
   type AddNoteState,
   type ContactFormState,
   type ContactFormValues,
+  type DeleteContactState,
   type EditNoteState,
 } from "@/lib/contact-form";
 import {
+  deleteContactById,
   insertContact,
   insertNote,
   updateContactById,
@@ -93,6 +95,25 @@ export async function updateContact(
   revalidatePath("/");
   revalidatePath(`/contacts/${contactId}`);
   redirect(`/contacts/${contactId}?updated=1`);
+}
+
+export async function deleteContact(
+  contactId: number,
+): Promise<DeleteContactState> {
+  let name: string | null = null;
+  if (Number.isInteger(contactId) && contactId > 0) {
+    try {
+      name = await deleteContactById(contactId);
+    } catch (error) {
+      console.error("Failed to delete contact", error);
+      return { error: "Не удалось удалить контакт. Попробуйте ещё раз." };
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/contacts/${contactId}`);
+  // Already deleted (e.g. in another tab): the contact is gone either way, so no message.
+  redirect(name === null ? "/" : `/?${new URLSearchParams({ deleted: name })}`);
 }
 
 export async function addNote(
