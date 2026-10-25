@@ -27,31 +27,45 @@ export async function ContactList({
   const params = await searchParams;
   const query = (firstValue(params.q) ?? "").trim();
   const addedId = Number(firstValue(params.added));
+  const deletedName = query ? "" : (firstValue(params.deleted) ?? "").trim();
 
   const { items, total } = await searchContacts(query);
   const added = query
     ? undefined
     : items.find((contact) => contact.id === addedId);
 
+  const deletedAlert = deletedName && (
+    <Alert variant="success">
+      <CircleCheckIcon />
+      <AlertTitle className="break-words">
+        Контакт «{deletedName}» удалён
+      </AlertTitle>
+    </Alert>
+  );
+
   if (total === 0) {
     return (
-      <div className="flex flex-col items-center gap-5 rounded-card border px-6 py-12 text-center">
-        <BigLetter />
-        <p className="text-muted-foreground">
-          Пока нет ни одного контакта.
-        </p>
-        <Link href="/contacts/new" className={cn(buttonVariants())}>
-          Добавить первый контакт
-          <ButtonBadge>
-            <PlusIcon />
-          </ButtonBadge>
-        </Link>
+      <div className="flex flex-col gap-3">
+        {deletedAlert}
+        <div className="flex flex-col items-center gap-5 rounded-card border px-6 py-12 text-center">
+          <BigLetter />
+          <p className="text-muted-foreground">
+            Пока нет ни одного контакта.
+          </p>
+          <Link href="/contacts/new" className={cn(buttonVariants())}>
+            Добавить первый контакт
+            <ButtonBadge>
+              <PlusIcon />
+            </ButtonBadge>
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-3">
+      {deletedAlert}
       {added && (
         <>
           <Alert variant="success">

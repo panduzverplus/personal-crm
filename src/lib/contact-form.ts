@@ -69,6 +69,8 @@ export function contactFormFrom(
   };
 }
 
+export type DeleteContactState = { error?: string };
+
 export const noteSchema = z
   .string()
   .trim()
