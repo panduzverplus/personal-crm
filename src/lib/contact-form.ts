@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { contactFrequencies } from "@/lib/keep-in-touch";
 
 // Validation messages are shown in the UI, so they are in Russian.
 
@@ -27,6 +28,10 @@ export const contactSchema = z.object({
       "Похоже, в адресе почты ошибка",
     )
     .transform((value) => value || null),
+  // An empty value is the "not set" option.
+  contactFrequency: z
+    .enum(["", ...contactFrequencies], "Выберите вариант из списка")
+    .transform((value) => value || null),
 });
 
 export type ContactInput = z.output<typeof contactSchema>;
@@ -37,6 +42,7 @@ export const contactFields = [
   "howWeMet",
   "phone",
   "email",
+  "contactFrequency",
 ] as const;
 
 export type ContactField = (typeof contactFields)[number];
@@ -49,7 +55,14 @@ export type ContactFormState = {
 };
 
 export const emptyContactForm: ContactFormState = {
-  values: { name: "", about: "", howWeMet: "", phone: "", email: "" },
+  values: {
+    name: "",
+    about: "",
+    howWeMet: "",
+    phone: "",
+    email: "",
+    contactFrequency: "",
+  },
   errors: {},
 };
 
@@ -64,6 +77,7 @@ export function contactFormFrom(
       howWeMet: contact.howWeMet ?? "",
       phone: contact.phone ?? "",
       email: contact.email ?? "",
+      contactFrequency: contact.contactFrequency ?? "",
     },
     errors: {},
   };

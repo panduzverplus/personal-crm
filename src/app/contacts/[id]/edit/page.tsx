@@ -60,7 +60,7 @@ function EditFormSkeleton() {
       <span className="h-4 w-36 animate-pulse rounded-full bg-skeleton/60" />
       <div className="flex flex-col gap-5 rounded-card border p-5 md:p-7">
         <span className="h-8 w-56 animate-pulse rounded-full bg-skeleton/60" />
-        {Array.from({ length: 5 }, (_, index) => (
+        {Array.from({ length: 6 }, (_, index) => (
           <div key={index} className="flex flex-col gap-2">
             <span className="h-3 w-28 animate-pulse rounded-full bg-skeleton/60" />
             <span className="h-11 w-full animate-pulse rounded-field bg-input" />

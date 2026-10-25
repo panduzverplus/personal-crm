@@ -5,18 +5,33 @@ import { useActionState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ContactField, ContactFormState } from "@/lib/contact-form";
+import { contactFrequencies, frequencyTitle } from "@/lib/keep-in-touch";
 
 type FieldConfig = {
   name: ContactField;
   label: string;
-  placeholder: string;
+  placeholder?: string;
   type?: "text" | "tel" | "email";
   multiline?: boolean;
+  // Makes the field a dropdown with these options.
+  options?: { value: string; label: string }[];
   required?: boolean;
 };
+
+const FREQUENCY_OPTIONS = [
+  { value: "", label: "Не задано" },
+  ...contactFrequencies.map((frequency) => ({
+    value: frequency,
+    label: frequencyTitle(frequency),
+  })),
+];
 
 const FIELDS: FieldConfig[] = [
   { name: "name", label: "Имя", placeholder: "Например, Анна Смирнова", required: true },
@@ -24,6 +39,7 @@ const FIELDS: FieldConfig[] = [
   { name: "howWeMet", label: "Откуда знакомы", placeholder: "Например, учились вместе в университете", multiline: true },
   { name: "phone", label: "Телефон", placeholder: "+7 900 000-00-00", type: "tel" },
   { name: "email", label: "Почта", placeholder: "name@example.com", type: "email" },
+  { name: "contactFrequency", label: "Как часто общаться", options: FREQUENCY_OPTIONS },
 ];
 
 /** Used both to add a new contact and to edit an existing one. */
@@ -52,7 +68,6 @@ export function ContactForm({
           id,
           name: field.name,
           defaultValue: state.values[field.name],
-          placeholder: field.placeholder,
           "aria-invalid": error ? true : undefined,
           "aria-describedby": error ? `${id}-error` : undefined,
         };
@@ -70,11 +85,26 @@ export function ContactForm({
                 </span>
               )}
             </Label>
-            {field.multiline ? (
-              <Textarea {...commonProps} rows={2} />
+            {field.options ? (
+              // React applies a select's defaultValue only on mount, and the form is reset
+              // after a failed save: remount with the submitted value so the choice is kept.
+              <NativeSelect key={commonProps.defaultValue} {...commonProps}>
+                {field.options.map((option) => (
+                  <NativeSelectOption key={option.value} value={option.value}>
+                    {option.label}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            ) : field.multiline ? (
+              <Textarea
+                {...commonProps}
+                placeholder={field.placeholder}
+                rows={2}
+              />
             ) : (
               <Input
                 {...commonProps}
+                placeholder={field.placeholder}
                 type={field.type ?? "text"}
                 required={field.required}
                 autoFocus={field.name === "name"}

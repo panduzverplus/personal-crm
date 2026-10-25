@@ -15,6 +15,13 @@
       "when": 1792153429788,
       "tag": "0001_note_updated_at",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792955186589,
+      "tag": "0002_contact_frequency",
+      "breakpoints": true
     }
   ]
 }
