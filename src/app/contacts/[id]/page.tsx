@@ -19,6 +19,11 @@ import {
   isOverdue,
   type ContactFrequency,
 } from "@/lib/keep-in-touch";
+import {
+  isListNarrowed,
+  parseListParams,
+  pathWithListParams,
+} from "@/lib/list-params";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -31,7 +36,6 @@ export default function ContactPage({
 }: PageProps<"/contacts/[id]">) {
   return (
     <div className="flex flex-col gap-6">
-      <BackLink />
       <Suspense fallback={<ContactCardSkeleton />}>
         <ContactCard params={params} searchParams={searchParams} />
       </Suspense>
@@ -43,10 +47,10 @@ async function ContactCard({
   params,
   searchParams,
 }: Pick<PageProps<"/contacts/[id]">, "params" | "searchParams">) {
-  const [{ id: rawId }, { updated }] = await Promise.all([
-    params,
-    searchParams,
-  ]);
+  const [{ id: rawId }, search] = await Promise.all([params, searchParams]);
+  const updated = search.updated;
+  // The list the card was opened from: the link back and the next pages keep its group and search.
+  const list = parseListParams(search);
   const id = parseContactId(rawId);
   if (id === null) {
     notFound();
@@ -56,10 +60,14 @@ async function ContactCard({
   if (!data) {
     notFound();
   }
-  const { contact, notes } = data;
+  const { contact, notes, groups } = data;
 
   return (
     <>
+      <BackLink href={pathWithListParams("/", list)}>
+        {isListNarrowed(list) ? "Назад к списку" : "Все контакты"}
+      </BackLink>
+
       {updated && (
         <Alert variant="success">
           <CircleCheckIcon />
@@ -81,14 +89,14 @@ async function ContactCard({
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
-              href={`/contacts/${contact.id}/edit`}
+              href={pathWithListParams(`/contacts/${contact.id}/edit`, list)}
               className={cn(buttonVariants({ variant: "outline" }))}
             >
               Изменить
             </Link>
             <DeleteContactButton
               contactName={contact.name}
-              action={deleteContact.bind(null, contact.id)}
+              action={deleteContact.bind(null, contact.id, list)}
             />
           </div>
         </div>
@@ -116,6 +124,9 @@ async function ContactCard({
                 {contact.email}
               </a>
             )}
+          </Detail>
+          <Detail label="Группы" wide>
+            {groups.map((group) => group.name).join(" · ")}
           </Detail>
           <Detail label="Как часто общаться" wide>
             {contact.contactFrequency &&
@@ -207,6 +218,7 @@ function Detail({
 function ContactCardSkeleton() {
   return (
     <div className="flex flex-col gap-6" aria-busy="true">
+      <span className="h-4 w-36 animate-pulse rounded-full bg-skeleton/60" />
       <div className="flex flex-col gap-6 rounded-card border p-5 md:p-7">
         <div className="flex items-center gap-4">
           <span className="size-14 animate-pulse rounded-full bg-avatar/50 md:size-16" />

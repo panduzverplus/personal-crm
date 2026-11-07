@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { GroupPicker, type CreateGroupAction } from "@/components/group-picker";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ContactField, ContactFormState } from "@/lib/contact-form";
+import type { GroupRef } from "@/lib/group-form";
 import { contactFrequencies, frequencyTitle } from "@/lib/keep-in-touch";
 
 type FieldConfig = {
@@ -46,6 +48,8 @@ const FIELDS: FieldConfig[] = [
 export function ContactForm({
   action,
   initialState,
+  groups,
+  createGroupAction,
   submitLabel,
   cancelHref,
 }: {
@@ -54,6 +58,8 @@ export function ContactForm({
     formData: FormData,
   ) => Promise<ContactFormState>;
   initialState: ContactFormState;
+  groups: GroupRef[];
+  createGroupAction: CreateGroupAction;
   submitLabel: string;
   cancelHref: string;
 }) {
@@ -119,6 +125,12 @@ export function ContactForm({
           </div>
         );
       })}
+
+      <GroupPicker
+        groups={groups}
+        initialSelected={initialState.groupIds}
+        createAction={createGroupAction}
+      />
 
       {state.formError && (
         <p role="alert" className="text-sm text-destructive">

@@ -8,6 +8,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ButtonBadge, buttonVariants } from "@/components/ui/button";
 import { searchContacts, type ContactListItem } from "@/lib/contacts";
 import { pluralize } from "@/lib/format";
+import type { GroupRef } from "@/lib/group-form";
+import { listQueryString } from "@/lib/list-params";
 import { cn } from "@/lib/utils";
 
 const CONTACT_FORMS: [string, string, string] = [
@@ -21,15 +23,23 @@ const firstValue = (value: string | string[] | undefined) =>
 
 export async function ContactList({
   searchParams,
+  query,
+  group,
 }: {
   searchParams: PageProps<"/">["searchParams"];
+  query: string;
+  /** The selected group; null shows everyone. */
+  group: GroupRef | null;
 }) {
   const params = await searchParams;
-  const query = (firstValue(params.q) ?? "").trim();
+  const listQuery = listQueryString({ group: group?.id ?? null, q: query });
   const addedId = Number(firstValue(params.added));
-  const deletedName = query ? "" : (firstValue(params.deleted) ?? "").trim();
+  const deletedName = (firstValue(params.deleted) ?? "").trim();
 
-  const { items, total } = await searchContacts(query);
+  const { items, total, groupTotal } = await searchContacts(
+    query,
+    group?.id ?? null,
+  );
   const added = query
     ? undefined
     : items.find((contact) => contact.id === addedId);
@@ -63,6 +73,18 @@ export async function ContactList({
     );
   }
 
+  // A group without anyone: no list to show, with or without a search.
+  if (group && groupTotal === 0) {
+    return (
+      <div className="flex flex-col gap-3">
+        {deletedAlert}
+        <div className="rounded-card border px-6 py-10 text-center text-muted-foreground">
+          В группе «{group.name}» пока никого нет.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {deletedAlert}
@@ -85,13 +107,17 @@ export async function ContactList({
         aria-live="polite"
       >
         {query
-          ? `Найдено: ${pluralize(items.length, CONTACT_FORMS)} из ${total.toLocaleString("ru-RU")}`
-          : `Всего ${pluralize(total, CONTACT_FORMS)}`}
+          ? `Найдено: ${pluralize(items.length, CONTACT_FORMS)} из ${groupTotal.toLocaleString("ru-RU")}`
+          : group
+            ? `В группе «${group.name}»: ${pluralize(groupTotal, CONTACT_FORMS)}`
+            : `Всего ${pluralize(total, CONTACT_FORMS)}`}
       </p>
 
       {items.length === 0 ? (
         <div className="rounded-card border px-6 py-10 text-center text-muted-foreground">
-          По запросу «{query}» никого не нашлось.
+          {group
+            ? `В группе «${group.name}» по запросу «${query}» никого не нашлось.`
+            : `По запросу «${query}» никого не нашлось.`}
         </div>
       ) : (
         // Frame and light dividers as in the app preview on the landing
@@ -100,6 +126,7 @@ export async function ContactList({
             <ContactRow
               key={contact.id}
               contact={contact}
+              listQuery={listQuery}
               highlighted={contact.id === added?.id}
             />
           ))}
@@ -111,9 +138,12 @@ export async function ContactList({
 
 function ContactRow({
   contact,
+  listQuery,
   highlighted,
 }: {
   contact: ContactListItem;
+  /** The group and search of the list ("" for the full list), so the card can lead back to it. */
+  listQuery: string;
   highlighted: boolean;
 }) {
   return (
@@ -123,7 +153,7 @@ function ContactRow({
     >
       {/* A plain <a>: LinkList opens it without a page reload. */}
       <a
-        href={`/contacts/${contact.id}`}
+        href={`/contacts/${contact.id}${listQuery}`}
         className="flex items-center gap-3 rounded-field px-3 py-3 transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
       >
         <ContactAvatar name={contact.name} />
@@ -132,6 +162,12 @@ function ContactRow({
           {contact.about && (
             <div className="truncate text-sm text-muted-foreground">
               {contact.about}
+            </div>
+          )}
+          {contact.groups.length > 0 && (
+            // Small text on one line, cut off when long, so the row stays compact.
+            <div className="truncate text-xs text-muted-foreground">
+              {contact.groups.join(" · ")}
             </div>
           )}
         </div>

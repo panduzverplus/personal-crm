@@ -2,24 +2,21 @@
 
 import { LoaderCircleIcon, SearchIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { use, useEffect, useRef, useTransition } from "react";
+import { useEffect, useRef, useTransition } from "react";
+import { useListControls } from "@/components/list-controls";
 import { Input } from "@/components/ui/input";
+import { listQueryString } from "@/lib/list-params";
 
 const DEBOUNCE_MS = 250;
 
 /**
  * Live search by name: keeps the query in the URL (?q=...), the server filters the list.
- * Reads the page's searchParams (not useSearchParams) so the input is server-rendered
- * and usable before hydration finishes.
+ * Takes the query from the page's searchParams (not useSearchParams) so the input is server-rendered
+ * and usable before hydration finishes. The selected group stays in the URL while searching.
  */
-export function ContactSearch({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export function ContactSearch({ query: urlQuery }: { query: string }) {
   const router = useRouter();
-  const rawQuery = use(searchParams).q;
-  const urlQuery = (Array.isArray(rawQuery) ? rawQuery[0] : rawQuery) ?? "";
+  const { queryRef, groupRef } = useListControls();
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -40,7 +37,8 @@ export function ContactSearch({
     const query = rawQuery.trim();
     if (query === lastNavigatedRef.current) return;
     lastNavigatedRef.current = query;
-    const href = query ? `/?${new URLSearchParams({ q: query })}` : "/";
+    // Read at the moment the timer fires, so a group picked while typing is not undone.
+    const href = `/${listQueryString({ group: groupRef.current, q: query })}`;
     startTransition(() => router.replace(href, { scroll: false }));
   }
 
@@ -64,6 +62,7 @@ export function ContactSearch({
         defaultValue={urlQuery}
         onChange={(event) => {
           const value = event.target.value;
+          queryRef.current = value.trim();
           clearTimeout(timerRef.current);
           timerRef.current = setTimeout(() => navigate(value), DEBOUNCE_MS);
         }}

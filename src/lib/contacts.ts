@@ -4,6 +4,7 @@ import {
   count,
   desc,
   eq,
+  inArray,
   isNotNull,
   max,
   sql,
@@ -11,7 +12,13 @@ import {
 } from "drizzle-orm";
 import { connection } from "next/server";
 import { db } from "@/db";
-import { contacts, notes, type NewContact } from "@/db/schema";
+import {
+  contactGroups,
+  contacts,
+  groups,
+  notes,
+  type NewContact,
+} from "@/db/schema";
 import type { ContactInput } from "@/lib/contact-form";
 import { dueDate, isOverdue } from "@/lib/keep-in-touch";
 
@@ -38,11 +45,29 @@ function nameMatchesQuery(query: string): SQL | undefined {
   );
 }
 
-export async function searchContacts(query: string) {
+// Drizzle drops the table name from columns in a single-table query, so inside a subquery
+// `${contacts.id}` would read as a bare "id" and could mean the subquery's own table.
+// The outer contact is therefore written out in full.
+const outerContactId = sql.raw('"contacts"."id"');
+
+/** The contact is in the group. */
+function isInGroup(groupId: number): SQL {
+  return sql`exists (
+    select 1 from contact_groups cg
+    where cg.contact_id = ${outerContactId}
+      and cg.group_id = ${groupId}
+  )`;
+}
+
+/**
+ * Contacts whose name matches the query, only from the group when one is given.
+ * `total` counts all contacts in the app, `groupTotal` those in the group (all of them without a group).
+ */
+export async function searchContacts(query: string, groupId: number | null) {
   // Contacts must always be read fresh from the database, never prerendered.
   await connection();
 
-  const [items, [{ total }]] = await Promise.all([
+  const [items, [{ total }], groupTotal] = await Promise.all([
     db
       .select({
         id: contacts.id,
@@ -50,14 +75,32 @@ export async function searchContacts(query: string) {
         about: contacts.about,
         phone: contacts.phone,
         email: contacts.email,
+        // Names of the contact's groups in one subquery, so rows do not cost extra queries.
+        groups: sql<string[]>`coalesce((
+          select array_agg(g.name order by g.name collate "ru-x-icu", g.id)
+          from contact_groups cg
+          join groups g on g.id = cg.group_id
+          where cg.contact_id = ${outerContactId}
+        ), '{}')`,
       })
       .from(contacts)
-      .where(nameMatchesQuery(query))
+      .where(
+        and(
+          nameMatchesQuery(query),
+          groupId === null ? undefined : isInGroup(groupId),
+        ),
+      )
       .orderBy(sql`${contacts.name} collate "ru-x-icu"`, contacts.id),
     db.select({ total: count() }).from(contacts),
+    groupId === null
+      ? undefined
+      : db
+          .select({ total: count() })
+          .from(contactGroups)
+          .where(eq(contactGroups.groupId, groupId)),
   ]);
 
-  return { items, total };
+  return { items, total, groupTotal: groupTotal ? groupTotal[0].total : total };
 }
 
 export type ContactListItem = Awaited<
@@ -67,9 +110,9 @@ export type ContactListItem = Awaited<
 /**
  * Contacts with a frequency whose due day has passed: the most overdue first,
  * the same due day by name. The due day counts from the latest note, or from
- * when the contact was added if it has no notes.
+ * when the contact was added if it has no notes. With a group, only its contacts.
  */
-export async function getOverdueContacts() {
+export async function getOverdueContacts(groupId: number | null) {
   await connection();
 
   const rows = await db
@@ -83,7 +126,12 @@ export async function getOverdueContacts() {
     })
     .from(contacts)
     .leftJoin(notes, eq(notes.contactId, contacts.id))
-    .where(isNotNull(contacts.contactFrequency))
+    .where(
+      and(
+        isNotNull(contacts.contactFrequency),
+        groupId === null ? undefined : isInGroup(groupId),
+      ),
+    )
     .groupBy(contacts.id);
 
   const today = new Date();
@@ -120,37 +168,88 @@ export async function getContact(id: number) {
   return contact ?? null;
 }
 
+/** Groups of one contact, in alphabetical order. */
+export async function getContactGroups(contactId: number) {
+  await connection();
+
+  return db
+    .select({ id: groups.id, name: groups.name })
+    .from(contactGroups)
+    .innerJoin(groups, eq(groups.id, contactGroups.groupId))
+    .where(eq(contactGroups.contactId, contactId))
+    .orderBy(sql`${groups.name} collate "ru-x-icu"`, groups.id);
+}
+
 export async function getContactWithNotes(id: number) {
   const contact = await getContact(id);
   if (!contact) {
     return null;
   }
 
-  const contactNotes = await db
-    .select()
-    .from(notes)
-    .where(eq(notes.contactId, id))
-    .orderBy(desc(notes.createdAt), desc(notes.id));
+  const [contactNotes, contactGroupList] = await Promise.all([
+    db
+      .select()
+      .from(notes)
+      .where(eq(notes.contactId, id))
+      .orderBy(desc(notes.createdAt), desc(notes.id)),
+    getContactGroups(id),
+  ]);
 
-  return { contact, notes: contactNotes };
+  return { contact, notes: contactNotes, groups: contactGroupList };
 }
 
-export async function insertContact(values: NewContact) {
-  const [row] = await db
-    .insert(contacts)
-    .values(values)
-    .returning({ id: contacts.id });
-  return row.id;
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Makes `groupIds` the whole set of the contact's groups. A group that no longer exists
+ * (deleted in another tab) is skipped, so one stale checkbox does not lose the other changes.
+ */
+async function replaceContactGroups(
+  tx: Transaction,
+  contactId: number,
+  groupIds: number[],
+) {
+  await tx.delete(contactGroups).where(eq(contactGroups.contactId, contactId));
+  if (groupIds.length === 0) {
+    return;
+  }
+  await tx.execute(
+    sql`insert into ${contactGroups} (contact_id, group_id)
+      select ${contactId}::int, ${groups.id} from ${groups}
+      where ${inArray(groups.id, groupIds)}`,
+  );
 }
 
-/** Returns false when the contact does not exist. */
-export async function updateContactById(id: number, values: ContactInput) {
-  const rows = await db
-    .update(contacts)
-    .set(values)
-    .where(eq(contacts.id, id))
-    .returning({ id: contacts.id });
-  return rows.length > 0;
+/** Saves the contact together with its groups in one transaction; returns the new id. */
+export async function insertContact(values: NewContact, groupIds: number[]) {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(contacts)
+      .values(values)
+      .returning({ id: contacts.id });
+    await replaceContactGroups(tx, row.id, groupIds);
+    return row.id;
+  });
+}
+
+/** Saves the contact and replaces its groups in one transaction. Returns false when the contact does not exist. */
+export async function updateContactById(
+  id: number,
+  values: ContactInput,
+  groupIds: number[],
+) {
+  return db.transaction(async (tx) => {
+    const rows = await tx
+      .update(contacts)
+      .set(values)
+      .where(eq(contacts.id, id))
+      .returning({ id: contacts.id });
+    if (rows.length === 0) {
+      return false;
+    }
+    await replaceContactGroups(tx, id, groupIds);
+    return true;
+  });
 }
 
 /** Deletes the contact with all its notes; returns its name, or null when it does not exist. */

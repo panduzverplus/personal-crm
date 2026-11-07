@@ -1,10 +1,13 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const contactFrequency = pgEnum("contact_frequency", [
@@ -51,6 +54,41 @@ export const notes = pgTable(
   ],
 );
 
+export const groups = pgTable(
+  "groups",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // Names are unique ignoring letter case and "е"/"ё", the same rule as the contact search.
+    uniqueIndex("groups_name_normalized_idx").on(
+      sql`replace(lower(${table.name}), 'ё', 'е')`,
+    ),
+  ],
+);
+
+export const contactGroups = pgTable(
+  "contact_groups",
+  {
+    contactId: integer("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "cascade" }),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    // Starts with contact_id, so it also serves "groups of one contact".
+    primaryKey({ columns: [table.contactId, table.groupId] }),
+    index("contact_groups_group_id_idx").on(table.groupId),
+  ],
+);
+
 export type Contact = typeof contacts.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;
 export type Note = typeof notes.$inferSelect;
+export type Group = typeof groups.$inferSelect;
