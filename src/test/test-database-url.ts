@@ -28,6 +28,17 @@ export function getTestDatabaseUrl(): string {
   return `postgres://${user}:${password}@${credentials.host}:${credentials.port}/${database}`;
 }
 
+/**
+ * Connection string of the database for Playwright: the working database name plus `_e2e_test`.
+ * Separate from the Vitest one, because each run of `pnpm test` drops and recreates that one.
+ */
+export function getE2eDatabaseUrl(): string {
+  const url = new URL(getTestDatabaseUrl());
+  const name = getDatabaseName(url.toString()).slice(0, -TEST_SUFFIX.length);
+  url.pathname = `/${encodeURIComponent(`${name}_e2e${TEST_SUFFIX}`)}`;
+  return url.toString();
+}
+
 /** The same server, but the `postgres` maintenance database: CREATE/DROP DATABASE run there. */
 export function getMaintenanceDatabaseUrl(testDatabaseUrl: string): string {
   const url = new URL(testDatabaseUrl);
