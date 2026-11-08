@@ -9,16 +9,19 @@ import { pluralize } from "@/lib/format";
 
 const VISIBLE_ROWS = 5;
 
-const CONTACT_FORMS: [string, string, string] = [
-  "контакт",
-  "контакта",
-  "контактов",
-];
+const CONTACT_FORMS: [string, string, string] = ["контакт", "контакта", "контактов"];
 
 export type KeepInTouchRow = { id: number; name: string; details: string };
 
 /** Shows the first five overdue contacts; the rest open with "Показать всех". */
-export function KeepInTouchList({ rows }: { rows: KeepInTouchRow[] }) {
+export function KeepInTouchList({
+  rows,
+  listQuery,
+}: {
+  rows: KeepInTouchRow[];
+  /** The group and search of the list ("" for the full list), so the card can lead back to it. */
+  listQuery: string;
+}) {
   const [expanded, setExpanded] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const visibleRows = expanded ? rows : rows.slice(0, VISIBLE_ROWS);
@@ -55,15 +58,13 @@ export function KeepInTouchList({ rows }: { rows: KeepInTouchRow[] }) {
           <li key={row.id}>
             {/* A plain <a>: LinkList opens it without a page reload. */}
             <a
-              href={`/contacts/${row.id}`}
+              href={`/contacts/${row.id}${listQuery}`}
               className="flex items-center gap-3 rounded-field px-3 py-3 transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
             >
               <ContactAvatar name={row.name} />
               <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold">{row.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {row.details}
-                </div>
+                <div className="text-sm text-muted-foreground">{row.details}</div>
               </div>
             </a>
           </li>

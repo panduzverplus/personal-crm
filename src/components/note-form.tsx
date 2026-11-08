@@ -12,10 +12,7 @@ export function NoteForm({
 }: {
   action: (state: AddNoteState, formData: FormData) => Promise<AddNoteState>;
 }) {
-  const [state, formAction, pending] = useActionState(
-    action,
-    initialAddNoteState,
-  );
+  const [state, formAction, pending] = useActionState(action, initialAddNoteState);
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
@@ -47,11 +44,7 @@ export function NoteForm({
           </p>
         )}
         {state.status === "saved" && !pending && (
-          <p
-            key={state.savedAt}
-            role="status"
-            className="flex items-center gap-1.5 text-sm"
-          >
+          <p key={state.savedAt} role="status" className="flex items-center gap-1.5 text-sm">
             <CircleCheckIcon aria-hidden className="size-4" />
             Заметка сохранена
           </p>

@@ -1,10 +1,7 @@
 const pluralRules = new Intl.PluralRules("ru-RU");
 
 /** Picks the Russian plural form: forms are for 1, 2–4 and 5+ (e.g. контакт/контакта/контактов). */
-export function pluralize(
-  count: number,
-  [one, few, many]: [string, string, string],
-) {
+export function pluralize(count: number, [one, few, many]: [string, string, string]) {
   const form = pluralRules.select(count);
   const word = form === "one" ? one : form === "few" ? few : many;
   return `${count.toLocaleString("ru-RU")} ${word}`;

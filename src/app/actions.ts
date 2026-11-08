@@ -7,6 +7,7 @@ import {
   contactFields,
   contactSchema,
   noteSchema,
+  parseGroupIds,
   type AddNoteState,
   type ContactFormState,
   type ContactFormValues,
@@ -20,15 +21,25 @@ import {
   updateContactById,
   updateNoteBody,
 } from "@/lib/contacts";
+import {
+  parseGroupName,
+  type CreateGroupState,
+  type DeleteGroupState,
+  type RenameGroupState,
+} from "@/lib/group-form";
+import { deleteGroupById, insertGroup, renameGroupById } from "@/lib/groups";
+import { parseListParams, pathWithListParams, type ListParams } from "@/lib/list-params";
 
 function readContactForm(formData: FormData) {
   const values = Object.fromEntries(
     contactFields.map((field) => [field, String(formData.get(field) ?? "")]),
   ) as ContactFormValues;
 
+  const groupIds = parseGroupIds(formData.getAll("groupIds"));
+
   const parsed = contactSchema.safeParse(values);
   if (parsed.success) {
-    return { values, data: parsed.data, errors: null };
+    return { values, groupIds, data: parsed.data, errors: null };
   }
 
   const fieldErrors = z.flattenError(parsed.error).fieldErrors;
@@ -37,7 +48,7 @@ function readContactForm(formData: FormData) {
     const message = fieldErrors[field]?.[0];
     if (message) errors[field] = message;
   }
-  return { values, data: null, errors };
+  return { values, groupIds, data: null, errors };
 }
 
 export async function createContact(
@@ -46,16 +57,21 @@ export async function createContact(
 ): Promise<ContactFormState> {
   const form = readContactForm(formData);
   if (form.errors) {
-    return { values: form.values, errors: form.errors };
+    return {
+      values: form.values,
+      groupIds: form.groupIds,
+      errors: form.errors,
+    };
   }
 
   let id: number;
   try {
-    id = await insertContact(form.data);
+    id = await insertContact(form.data, form.groupIds);
   } catch (error) {
     console.error("Failed to create contact", error);
     return {
       values: form.values,
+      groupIds: form.groupIds,
       errors: {},
       formError: "Не удалось сохранить контакт. Попробуйте ещё раз.",
     };
@@ -65,40 +81,65 @@ export async function createContact(
   redirect(`/?added=${id}`);
 }
 
+// Action arguments come from the browser, so the list parameters are checked like any other input.
+function readListParams(raw: ListParams) {
+  return parseListParams({
+    group: String(raw?.group ?? ""),
+    q: String(raw?.q ?? ""),
+  });
+}
+
 export async function updateContact(
   contactId: number,
+  listParams: ListParams,
   _previous: ContactFormState,
   formData: FormData,
 ): Promise<ContactFormState> {
   const form = readContactForm(formData);
   if (form.errors) {
-    return { values: form.values, errors: form.errors };
+    return {
+      values: form.values,
+      groupIds: form.groupIds,
+      errors: form.errors,
+    };
   }
 
   let updated = false;
   if (Number.isInteger(contactId) && contactId > 0) {
     try {
-      updated = await updateContactById(contactId, form.data);
+      updated = await updateContactById(contactId, form.data, form.groupIds);
     } catch (error) {
       console.error("Failed to update contact", error);
       return {
         values: form.values,
+        groupIds: form.groupIds,
         errors: {},
         formError: "Не удалось сохранить изменения. Попробуйте ещё раз.",
       };
     }
   }
   if (!updated) {
-    return { values: form.values, errors: {}, formError: "Контакт не найден" };
+    return {
+      values: form.values,
+      groupIds: form.groupIds,
+      errors: {},
+      formError: "Контакт не найден",
+    };
   }
 
   revalidatePath("/");
   revalidatePath(`/contacts/${contactId}`);
-  redirect(`/contacts/${contactId}?updated=1`);
+  // The card opens with the same list behind it: its group and search are kept.
+  redirect(
+    pathWithListParams(`/contacts/${contactId}`, readListParams(listParams), {
+      updated: "1",
+    }),
+  );
 }
 
 export async function deleteContact(
   contactId: number,
+  listParams: ListParams,
 ): Promise<DeleteContactState> {
   let name: string | null = null;
   if (Number.isInteger(contactId) && contactId > 0) {
@@ -113,7 +154,9 @@ export async function deleteContact(
   revalidatePath("/");
   revalidatePath(`/contacts/${contactId}`);
   // Already deleted (e.g. in another tab): the contact is gone either way, so no message.
-  redirect(name === null ? "/" : `/?${new URLSearchParams({ deleted: name })}`);
+  // The same list opens again, with its group and search.
+  const list = readListParams(listParams);
+  redirect(pathWithListParams("/", list, name === null ? {} : { deleted: name }));
 }
 
 export async function addNote(
@@ -183,4 +226,93 @@ export async function updateNote(
 
   revalidatePath(`/contacts/${contactId}`);
   return { status: "saved" };
+}
+
+// A group name is shown on the home page, in the contact forms and in every contact card,
+// so any change to groups refreshes the whole app.
+function revalidateGroups() {
+  revalidatePath("/", "layout");
+}
+
+export async function createGroup(
+  _previous: CreateGroupState,
+  formData: FormData,
+): Promise<CreateGroupState> {
+  const name = String(formData.get("name") ?? "");
+
+  const parsed = parseGroupName(name);
+  if (!parsed.ok) {
+    return { status: "error", name, error: parsed.error };
+  }
+
+  let result;
+  try {
+    result = await insertGroup(parsed.name);
+  } catch (error) {
+    console.error("Failed to create group", error);
+    return {
+      status: "error",
+      name,
+      error: "Не удалось создать группу. Попробуйте ещё раз.",
+    };
+  }
+  if (result.status === "duplicate") {
+    return { status: "error", name, error: "Такая группа уже есть" };
+  }
+
+  revalidateGroups();
+  return { status: "saved", group: result.group, savedAt: Date.now() };
+}
+
+export async function renameGroup(
+  groupId: number,
+  _previous: RenameGroupState,
+  formData: FormData,
+): Promise<RenameGroupState> {
+  const name = String(formData.get("name") ?? "");
+
+  const parsed = parseGroupName(name);
+  if (!parsed.ok) {
+    return { status: "error", name, error: parsed.error };
+  }
+
+  let result: Awaited<ReturnType<typeof renameGroupById>> = {
+    status: "not-found",
+  };
+  if (Number.isInteger(groupId) && groupId > 0) {
+    try {
+      result = await renameGroupById(groupId, parsed.name);
+    } catch (error) {
+      console.error("Failed to rename group", error);
+      return {
+        status: "error",
+        name,
+        error: "Не удалось сохранить название. Попробуйте ещё раз.",
+      };
+    }
+  }
+  if (result.status === "duplicate") {
+    return { status: "error", name, error: "Такая группа уже есть" };
+  }
+  if (result.status === "not-found") {
+    return { status: "error", name, error: "Группа не найдена" };
+  }
+
+  revalidateGroups();
+  return { status: "saved" };
+}
+
+export async function deleteGroup(groupId: number): Promise<DeleteGroupState> {
+  if (Number.isInteger(groupId) && groupId > 0) {
+    try {
+      await deleteGroupById(groupId);
+    } catch (error) {
+      console.error("Failed to delete group", error);
+      return { error: "Не удалось удалить группу. Попробуйте ещё раз." };
+    }
+  }
+
+  // Already deleted (e.g. in another tab): the group is gone either way, so there is nothing to report.
+  revalidateGroups();
+  return {};
 }

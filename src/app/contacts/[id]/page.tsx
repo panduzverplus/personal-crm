@@ -13,25 +13,17 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { getContactWithNotes, parseContactId } from "@/lib/contacts";
 import { formatDate, formatDateTime, pluralize } from "@/lib/format";
-import {
-  dueDate,
-  frequencyTitle,
-  isOverdue,
-  type ContactFrequency,
-} from "@/lib/keep-in-touch";
+import { dueDate, frequencyTitle, isOverdue, type ContactFrequency } from "@/lib/keep-in-touch";
+import { isListNarrowed, parseListParams, pathWithListParams } from "@/lib/list-params";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Карточка контакта",
 };
 
-export default function ContactPage({
-  params,
-  searchParams,
-}: PageProps<"/contacts/[id]">) {
+export default function ContactPage({ params, searchParams }: PageProps<"/contacts/[id]">) {
   return (
     <div className="flex flex-col gap-6">
-      <BackLink />
       <Suspense fallback={<ContactCardSkeleton />}>
         <ContactCard params={params} searchParams={searchParams} />
       </Suspense>
@@ -43,10 +35,10 @@ async function ContactCard({
   params,
   searchParams,
 }: Pick<PageProps<"/contacts/[id]">, "params" | "searchParams">) {
-  const [{ id: rawId }, { updated }] = await Promise.all([
-    params,
-    searchParams,
-  ]);
+  const [{ id: rawId }, search] = await Promise.all([params, searchParams]);
+  const updated = search.updated;
+  // The list the card was opened from: the link back and the next pages keep its group and search.
+  const list = parseListParams(search);
   const id = parseContactId(rawId);
   if (id === null) {
     notFound();
@@ -56,10 +48,14 @@ async function ContactCard({
   if (!data) {
     notFound();
   }
-  const { contact, notes } = data;
+  const { contact, notes, groups } = data;
 
   return (
     <>
+      <BackLink href={pathWithListParams("/", list)}>
+        {isListNarrowed(list) ? "Назад к списку" : "Все контакты"}
+      </BackLink>
+
       {updated && (
         <Alert variant="success">
           <CircleCheckIcon />
@@ -69,26 +65,21 @@ async function ContactCard({
 
       <section className="flex flex-col gap-6 rounded-card border p-5 md:gap-8 md:p-7">
         <div className="flex flex-wrap items-start gap-4">
-          <ContactAvatar
-            name={contact.name}
-            className="size-14 text-lg md:size-16"
-          />
+          <ContactAvatar name={contact.name} className="size-14 text-lg md:size-16" />
           <div className="min-w-0 flex-1 basis-48 self-center">
             <h1 className="text-h1 font-light break-words">{contact.name}</h1>
-            {contact.about && (
-              <p className="mt-2 text-muted-foreground">{contact.about}</p>
-            )}
+            {contact.about && <p className="mt-2 text-muted-foreground">{contact.about}</p>}
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
-              href={`/contacts/${contact.id}/edit`}
+              href={pathWithListParams(`/contacts/${contact.id}/edit`, list)}
               className={cn(buttonVariants({ variant: "outline" }))}
             >
               Изменить
             </Link>
             <DeleteContactButton
               contactName={contact.name}
-              action={deleteContact.bind(null, contact.id)}
+              action={deleteContact.bind(null, contact.id, list)}
             />
           </div>
         </div>
@@ -116,6 +107,9 @@ async function ContactCard({
                 {contact.email}
               </a>
             )}
+          </Detail>
+          <Detail label="Группы" wide>
+            {groups.map((group) => group.name).join(" · ")}
           </Detail>
           <Detail label="Как часто общаться" wide>
             {contact.contactFrequency &&
@@ -161,9 +155,7 @@ async function ContactCard({
                 createdAt={note.createdAt.toISOString()}
                 createdLabel={formatDateTime(note.createdAt)}
                 updatedAt={note.updatedAt?.toISOString() ?? null}
-                updatedLabel={
-                  note.updatedAt ? formatDateTime(note.updatedAt) : null
-                }
+                updatedLabel={note.updatedAt ? formatDateTime(note.updatedAt) : null}
                 action={updateNote.bind(null, note.id)}
               />
             ))}
@@ -177,26 +169,14 @@ async function ContactCard({
 /** E.g. "Раз в месяц · связаться до 3 ноября 2026 г." or "Раз в месяц · пора связаться". */
 function keepInTouchStatus(frequency: ContactFrequency, lastContact: Date) {
   const due = dueDate(lastContact, frequency);
-  const status = isOverdue(due, new Date())
-    ? "пора связаться"
-    : `связаться до ${formatDate(due)}`;
+  const status = isOverdue(due, new Date()) ? "пора связаться" : `связаться до ${formatDate(due)}`;
   return `${frequencyTitle(frequency)} · ${status}`;
 }
 
-function Detail({
-  label,
-  wide,
-  children,
-}: {
-  label: string;
-  wide?: boolean;
-  children: ReactNode;
-}) {
+function Detail({ label, wide, children }: { label: string; wide?: boolean; children: ReactNode }) {
   return (
     <div className={cn("min-w-0 border-t pt-3", wide && "sm:col-span-2")}>
-      <dt className="font-mono text-meta text-muted-foreground uppercase">
-        {label}
-      </dt>
+      <dt className="font-mono text-meta text-muted-foreground uppercase">{label}</dt>
       <dd className="mt-1">
         {children || <span className="text-muted-foreground">не указано</span>}
       </dd>
@@ -207,6 +187,7 @@ function Detail({
 function ContactCardSkeleton() {
   return (
     <div className="flex flex-col gap-6" aria-busy="true">
+      <span className="h-4 w-36 animate-pulse rounded-full bg-skeleton/60" />
       <div className="flex flex-col gap-6 rounded-card border p-5 md:p-7">
         <div className="flex items-center gap-4">
           <span className="size-14 animate-pulse rounded-full bg-avatar/50 md:size-16" />

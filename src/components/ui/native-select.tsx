@@ -1,6 +1,6 @@
-import * as React from "react"
-import { ChevronDownIcon } from "lucide-react"
-import { cn } from "cn"
+import * as React from "react";
+import { ChevronDownIcon } from "lucide-react";
+import { cn } from "cn";
 
 // From the shadcn registry (base-nova), restyled to match Input.
 
@@ -9,7 +9,7 @@ function NativeSelect({ className, ...props }: React.ComponentProps<"select">) {
     <div
       className={cn(
         "group/native-select relative w-full has-[select:disabled]:opacity-50",
-        className
+        className,
       )}
       data-slot="native-select-wrapper"
     >
@@ -24,33 +24,27 @@ function NativeSelect({ className, ...props }: React.ComponentProps<"select">) {
         data-slot="native-select-icon"
       />
     </div>
-  )
+  );
 }
 
-function NativeSelectOption({
-  className,
-  ...props
-}: React.ComponentProps<"option">) {
+function NativeSelectOption({ className, ...props }: React.ComponentProps<"option">) {
   return (
     <option
       data-slot="native-select-option"
       className={cn("bg-input text-foreground", className)}
       {...props}
     />
-  )
+  );
 }
 
-function NativeSelectOptGroup({
-  className,
-  ...props
-}: React.ComponentProps<"optgroup">) {
+function NativeSelectOptGroup({ className, ...props }: React.ComponentProps<"optgroup">) {
   return (
     <optgroup
       data-slot="native-select-optgroup"
       className={cn("bg-input text-foreground", className)}
       {...props}
     />
-  )
+  );
 }
 
-export { NativeSelect, NativeSelectOptGroup, NativeSelectOption }
+export { NativeSelect, NativeSelectOptGroup, NativeSelectOption };

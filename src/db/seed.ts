@@ -15,22 +15,14 @@ async function main() {
   const db = createDb(client);
 
   try {
-    const [{ value: existing }] = await db
-      .select({ value: count() })
-      .from(contacts);
+    const [{ value: existing }] = await db.select({ value: count() }).from(contacts);
     if (existing > 0) {
       // Never touch existing data: seeding is only for an empty database.
-      console.log(
-        `Database already contains ${existing} contacts, seeding skipped.`,
-      );
+      console.log(`Database already contains ${existing} contacts, seeding skipped.`);
       return;
     }
 
-    const generated = generateContacts(
-      CONTACT_COUNT,
-      createRandom(RANDOM_SEED),
-      new Date(),
-    );
+    const generated = generateContacts(CONTACT_COUNT, createRandom(RANDOM_SEED), new Date());
 
     let noteTotal = 0;
     await db.transaction(async (tx) => {
@@ -66,9 +58,7 @@ async function main() {
       }
     });
 
-    console.log(
-      `Seeded ${generated.length} contacts and ${noteTotal} notes.`,
-    );
+    console.log(`Seeded ${generated.length} contacts and ${noteTotal} notes.`);
   } finally {
     await client.end();
   }

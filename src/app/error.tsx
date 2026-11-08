@@ -20,8 +20,7 @@ export default function ErrorPage({
       <BigLetter />
       <h1 className="text-h2 font-light">Что-то пошло не так</h1>
       <p className="text-muted-foreground">
-        Не получилось загрузить данные. Проверьте, что база данных запущена, и
-        попробуйте ещё раз.
+        Не получилось загрузить данные. Проверьте, что база данных запущена, и попробуйте ещё раз.
       </p>
       <Button variant="outline" onClick={() => retry()}>
         Попробовать ещё раз

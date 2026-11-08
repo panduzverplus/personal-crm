@@ -2,16 +2,15 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { GroupPicker, type CreateGroupAction } from "@/components/group-picker";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ContactField, ContactFormState } from "@/lib/contact-form";
+import type { GroupRef } from "@/lib/group-form";
 import { contactFrequencies, frequencyTitle } from "@/lib/keep-in-touch";
 
 type FieldConfig = {
@@ -36,7 +35,12 @@ const FREQUENCY_OPTIONS = [
 const FIELDS: FieldConfig[] = [
   { name: "name", label: "Имя", placeholder: "Например, Анна Смирнова", required: true },
   { name: "about", label: "Кто это", placeholder: "Например, дизайнер, подруга Саши" },
-  { name: "howWeMet", label: "Откуда знакомы", placeholder: "Например, учились вместе в университете", multiline: true },
+  {
+    name: "howWeMet",
+    label: "Откуда знакомы",
+    placeholder: "Например, учились вместе в университете",
+    multiline: true,
+  },
   { name: "phone", label: "Телефон", placeholder: "+7 900 000-00-00", type: "tel" },
   { name: "email", label: "Почта", placeholder: "name@example.com", type: "email" },
   { name: "contactFrequency", label: "Как часто общаться", options: FREQUENCY_OPTIONS },
@@ -46,14 +50,15 @@ const FIELDS: FieldConfig[] = [
 export function ContactForm({
   action,
   initialState,
+  groups,
+  createGroupAction,
   submitLabel,
   cancelHref,
 }: {
-  action: (
-    state: ContactFormState,
-    formData: FormData,
-  ) => Promise<ContactFormState>;
+  action: (state: ContactFormState, formData: FormData) => Promise<ContactFormState>;
   initialState: ContactFormState;
+  groups: GroupRef[];
+  createGroupAction: CreateGroupAction;
   submitLabel: string;
   cancelHref: string;
 }) {
@@ -80,9 +85,7 @@ export function ContactForm({
                   *
                 </span>
               ) : (
-                <span className="font-normal text-muted-foreground">
-                  — необязательно
-                </span>
+                <span className="font-normal text-muted-foreground">— необязательно</span>
               )}
             </Label>
             {field.options ? (
@@ -96,11 +99,7 @@ export function ContactForm({
                 ))}
               </NativeSelect>
             ) : field.multiline ? (
-              <Textarea
-                {...commonProps}
-                placeholder={field.placeholder}
-                rows={2}
-              />
+              <Textarea {...commonProps} placeholder={field.placeholder} rows={2} />
             ) : (
               <Input
                 {...commonProps}
@@ -120,6 +119,12 @@ export function ContactForm({
         );
       })}
 
+      <GroupPicker
+        groups={groups}
+        initialSelected={initialState.groupIds}
+        createAction={createGroupAction}
+      />
+
       {state.formError && (
         <p role="alert" className="text-sm text-destructive">
           {state.formError}
@@ -130,10 +135,7 @@ export function ContactForm({
         <Button type="submit" size="lg" disabled={pending}>
           {pending ? "Сохраняю…" : submitLabel}
         </Button>
-        <Link
-          href={cancelHref}
-          className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
-        >
+        <Link href={cancelHref} className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
           Отмена
         </Link>
       </div>

@@ -45,9 +45,7 @@ export function DeleteContactButton({
         setError(undefined);
       }}
     >
-      <AlertDialogTrigger render={<Button variant="destructive" />}>
-        Удалить
-      </AlertDialogTrigger>
+      <AlertDialogTrigger render={<Button variant="destructive" />}>Удалить</AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="break-words">
@@ -64,11 +62,7 @@ export function DeleteContactButton({
         )}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Отмена</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            disabled={pending}
-            onClick={handleDelete}
-          >
+          <AlertDialogAction variant="destructive" disabled={pending} onClick={handleDelete}>
             {pending ? "Удаляю…" : "Удалить"}
           </AlertDialogAction>
         </AlertDialogFooter>

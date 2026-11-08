@@ -6,10 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { EditNoteState } from "@/lib/contact-form";
 
-type EditNoteAction = (
-  state: EditNoteState,
-  formData: FormData,
-) => Promise<EditNoteState>;
+type EditNoteAction = (state: EditNoteState, formData: FormData) => Promise<EditNoteState>;
 
 /** One note in the contact card; can be switched into an inline editor. */
 export function NoteItem({
@@ -59,12 +56,7 @@ export function NoteItem({
       </div>
       {editing ? (
         // Mounted only while editing, so every edit starts from the saved text.
-        <NoteEditor
-          noteId={noteId}
-          body={body}
-          action={action}
-          onClose={() => setEditing(false)}
-        />
+        <NoteEditor noteId={noteId} body={body} action={action} onClose={() => setEditing(false)} />
       ) : (
         <p className="mt-2 break-words whitespace-pre-wrap">{body}</p>
       )}
@@ -126,13 +118,7 @@ function NoteEditor({
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? "Сохраняю…" : "Сохранить"}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={pending}
-          onClick={onClose}
-        >
+        <Button type="button" variant="outline" size="sm" disabled={pending} onClick={onClose}>
           Отмена
         </Button>
         {state.status === "error" && (
