@@ -4,14 +4,17 @@ import { db } from "@/db";
 import { contactGroups, contacts } from "@/db/schema";
 import { resetDatabase } from "@/test/db";
 import { countQueries } from "@/test/count-queries";
-import { addContact, addGroup, addToGroup } from "@/test/factories";
+import { addContact, addGroup, addNote, addToGroup } from "@/test/factories";
 import {
+  deleteContactById,
   getContactGroups,
   getContactWithNotes,
   getOverdueContacts,
   insertContact,
+  insertNote,
   searchContacts,
   updateContactById,
+  updateNoteBody,
 } from "./contacts";
 
 async function groupIdsOf(contactId: number) {
@@ -347,6 +350,102 @@ describe("getOverdueContacts", () => {
     await addWeekly("Анна", 40);
 
     expect(await getOverdueContacts(12345)).toEqual([]);
+  });
+});
+
+describe("contact frequency and the due date", () => {
+  beforeEach(resetDatabase);
+
+  const overdueNames = async () => (await getOverdueContacts(null)).map(({ name }) => name);
+
+  it("saves the frequency chosen when adding a contact", async () => {
+    await insertContact({ name: "Анна", contactFrequency: "month" }, []);
+
+    const [row] = await db.select().from(contacts);
+    expect(row.contactFrequency).toBe("month");
+  });
+
+  it("saves a contact without a frequency by default", async () => {
+    await insertContact({ name: "Анна" }, []);
+
+    const [row] = await db.select().from(contacts);
+    expect(row.contactFrequency).toBeNull();
+  });
+
+  it("recounts the due date after the frequency changes", async () => {
+    const id = await addContact("Анна", { contactFrequency: "month", createdAt: daysAgo(10) });
+    expect(await overdueNames()).toEqual([]);
+
+    await updateContactById(id, { name: "Анна", ...noFields, contactFrequency: "week" }, []);
+
+    const [row] = await db.select().from(contacts);
+    expect(row.contactFrequency).toBe("week");
+    expect(await overdueNames()).toEqual(["Анна"]);
+  });
+
+  it("drops a contact from the overdue list when the frequency is removed", async () => {
+    const id = await addContact("Анна", { contactFrequency: "month", createdAt: daysAgo(60) });
+    expect(await overdueNames()).toEqual(["Анна"]);
+
+    await updateContactById(id, { name: "Анна", ...noFields }, []);
+
+    expect(await overdueNames()).toEqual([]);
+  });
+
+  it("makes a long-known contact overdue as soon as a frequency is set", async () => {
+    const id = await addContact("Анна", { createdAt: daysAgo(180) });
+    expect(await overdueNames()).toEqual([]);
+
+    await updateContactById(id, { name: "Анна", ...noFields, contactFrequency: "month" }, []);
+
+    expect(await overdueNames()).toEqual(["Анна"]);
+  });
+
+  it("restarts the due date from a new note", async () => {
+    const id = await addContact("Анна", { contactFrequency: "month", createdAt: daysAgo(120) });
+    await addNote(id, daysAgo(60));
+    expect(await overdueNames()).toEqual(["Анна"]);
+
+    await insertNote(id, "Созвонились");
+
+    expect(await overdueNames()).toEqual([]);
+  });
+
+  it("counts from the latest note, not the first one", async () => {
+    const id = await addContact("Анна", { contactFrequency: "month", createdAt: daysAgo(120) });
+    await addNote(id, daysAgo(90));
+    await addNote(id, daysAgo(5));
+
+    expect(await overdueNames()).toEqual([]);
+  });
+
+  it("does not restart the due date when an old note is edited", async () => {
+    const id = await addContact("Анна", { contactFrequency: "month", createdAt: daysAgo(120) });
+    const noteId = await addNote(id, daysAgo(60));
+
+    await updateNoteBody(noteId, "Исправленный текст");
+
+    expect(await overdueNames()).toEqual(["Анна"]);
+  });
+
+  it("returns the date of the latest note for the row of the block", async () => {
+    const id = await addContact("Анна", { contactFrequency: "month", createdAt: daysAgo(120) });
+    await addNote(id, daysAgo(90));
+    const latest = daysAgo(60);
+    await addNote(id, latest);
+
+    const [contact] = await getOverdueContacts(null);
+
+    expect(contact.lastNoteAt).toEqual(latest);
+  });
+
+  it("drops a deleted contact from the overdue list", async () => {
+    const id = await addContact("Анна", { contactFrequency: "month", createdAt: daysAgo(60) });
+    await addContact("Борис", { contactFrequency: "month", createdAt: daysAgo(60) });
+
+    await deleteContactById(id);
+
+    expect(await overdueNames()).toEqual(["Борис"]);
   });
 });
 

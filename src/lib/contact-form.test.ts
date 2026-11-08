@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contactFormFrom, emptyContactForm, parseGroupIds } from "./contact-form";
+import { contactFormFrom, contactSchema, emptyContactForm, parseGroupIds } from "./contact-form";
 
 describe("parseGroupIds", () => {
   it("returns an empty list when nothing is checked", () => {
@@ -46,5 +46,47 @@ describe("form state with groups", () => {
 
     expect(state.values.name).toBe("Анна");
     expect(state.groupIds).toEqual([3, 5]);
+  });
+});
+
+describe("contact frequency in the form", () => {
+  const filledForm = {
+    name: "Анна",
+    about: "",
+    howWeMet: "",
+    phone: "",
+    email: "",
+  };
+
+  it("pre-fills the form with the saved frequency", () => {
+    const state = contactFormFrom(
+      {
+        name: "Анна",
+        about: null,
+        howWeMet: null,
+        phone: null,
+        email: null,
+        contactFrequency: "quarter",
+      },
+      [],
+    );
+
+    expect(state.values.contactFrequency).toBe("quarter");
+  });
+
+  it("starts an empty form without a frequency", () => {
+    expect(emptyContactForm.values.contactFrequency).toBe("");
+  });
+
+  it("saves an untouched field as no frequency", () => {
+    const parsed = contactSchema.parse({ ...filledForm, contactFrequency: "" });
+
+    expect(parsed.contactFrequency).toBeNull();
+  });
+
+  it("keeps the chosen frequency", () => {
+    const parsed = contactSchema.parse({ ...filledForm, contactFrequency: "month" });
+
+    expect(parsed.contactFrequency).toBe("month");
   });
 });
