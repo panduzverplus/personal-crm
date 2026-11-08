@@ -10,12 +10,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-export const contactFrequency = pgEnum("contact_frequency", [
-  "week",
-  "month",
-  "quarter",
-  "year",
-]);
+export const contactFrequency = pgEnum("contact_frequency", ["week", "month", "quarter", "year"]);
 
 export const contacts = pgTable("contacts", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -27,9 +22,7 @@ export const contacts = pgTable("contacts", {
   email: text("email"),
   // How often to keep in touch; null when not set.
   contactFrequency: contactFrequency("contact_frequency"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const notes = pgTable(
@@ -40,18 +33,11 @@ export const notes = pgTable(
       .notNull()
       .references(() => contacts.id, { onDelete: "cascade" }),
     body: text("body").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     // Null until the note text is edited for the first time.
     updatedAt: timestamp("updated_at", { withTimezone: true }),
   },
-  (table) => [
-    index("notes_contact_id_created_at_idx").on(
-      table.contactId,
-      table.createdAt,
-    ),
-  ],
+  (table) => [index("notes_contact_id_created_at_idx").on(table.contactId, table.createdAt)],
 );
 
 export const groups = pgTable(
@@ -59,15 +45,11 @@ export const groups = pgTable(
   {
     id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
     name: text("name").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     // Names are unique ignoring letter case and "е"/"ё", the same rule as the contact search.
-    uniqueIndex("groups_name_normalized_idx").on(
-      sql`replace(lower(${table.name}), 'ё', 'е')`,
-    ),
+    uniqueIndex("groups_name_normalized_idx").on(sql`replace(lower(${table.name}), 'ё', 'е')`),
   ],
 );
 

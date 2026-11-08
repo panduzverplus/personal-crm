@@ -6,11 +6,7 @@ import { BackLink } from "@/components/back-link";
 import { ContactForm } from "@/components/contact-form";
 import { ContactFormSkeleton } from "@/components/contact-form-skeleton";
 import { contactFormFrom } from "@/lib/contact-form";
-import {
-  getContact,
-  getContactGroups,
-  parseContactId,
-} from "@/lib/contacts";
+import { getContact, getContactGroups, parseContactId } from "@/lib/contacts";
 import { listGroups } from "@/lib/groups";
 import { parseListParams, pathWithListParams } from "@/lib/list-params";
 

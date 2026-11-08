@@ -4,11 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import {
-  initialCreateGroupState,
-  type CreateGroupState,
-  type GroupRef,
-} from "@/lib/group-form";
+import { initialCreateGroupState, type CreateGroupState, type GroupRef } from "@/lib/group-form";
 
 export type CreateGroupAction = (
   state: CreateGroupState,
@@ -60,11 +56,7 @@ export function GroupPicker({
   }
 
   return (
-    <div
-      role="group"
-      aria-labelledby="contact-groups-label"
-      className="flex flex-col gap-3"
-    >
+    <div role="group" aria-labelledby="contact-groups-label" className="flex flex-col gap-3">
       <span
         id="contact-groups-label"
         className="flex items-center gap-2 text-sm leading-none font-medium"
@@ -136,11 +128,7 @@ export function GroupPicker({
           </Button>
         </div>
         {error && (
-          <p
-            id="new-contact-group-error"
-            role="alert"
-            className="text-sm text-destructive"
-          >
+          <p id="new-contact-group-error" role="alert" className="text-sm text-destructive">
             {error}
           </p>
         )}

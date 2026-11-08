@@ -56,20 +56,14 @@ export function DeleteGroupButton({
     >
       <AlertDialogTrigger
         render={
-          <Button
-            variant="destructive"
-            size="xs"
-            aria-label={`Удалить группу «${groupName}»`}
-          />
+          <Button variant="destructive" size="xs" aria-label={`Удалить группу «${groupName}»`} />
         }
       >
         Удалить
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="break-words">
-            Удалить группу «{groupName}»?
-          </AlertDialogTitle>
+          <AlertDialogTitle className="break-words">Удалить группу «{groupName}»?</AlertDialogTitle>
           <AlertDialogDescription>
             {contactCount === 0
               ? "В группе нет контактов. Отменить это нельзя."
@@ -83,11 +77,7 @@ export function DeleteGroupButton({
         )}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Отмена</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            disabled={pending}
-            onClick={handleDelete}
-          >
+          <AlertDialogAction variant="destructive" disabled={pending} onClick={handleDelete}>
             {pending ? "Удаляю…" : "Удалить"}
           </AlertDialogAction>
         </AlertDialogFooter>

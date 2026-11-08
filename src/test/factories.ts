@@ -1,17 +1,9 @@
 import { db } from "@/db";
-import {
-  contactGroups,
-  contacts,
-  groups,
-  type NewContact,
-} from "@/db/schema";
+import { contactGroups, contacts, groups, type NewContact } from "@/db/schema";
 
 // Helpers that put rows into the test database.
 
-export async function addContact(
-  name: string,
-  values: Partial<Omit<NewContact, "name">> = {},
-) {
+export async function addContact(name: string, values: Partial<Omit<NewContact, "name">> = {}) {
   const [row] = await db
     .insert(contacts)
     .values({ name, ...values })
@@ -20,10 +12,7 @@ export async function addContact(
 }
 
 export async function addGroup(name: string) {
-  const [row] = await db
-    .insert(groups)
-    .values({ name })
-    .returning({ id: groups.id });
+  const [row] = await db.insert(groups).values({ name }).returning({ id: groups.id });
   return row.id;
 }
 

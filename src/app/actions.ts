@@ -27,16 +27,8 @@ import {
   type DeleteGroupState,
   type RenameGroupState,
 } from "@/lib/group-form";
-import {
-  deleteGroupById,
-  insertGroup,
-  renameGroupById,
-} from "@/lib/groups";
-import {
-  parseListParams,
-  pathWithListParams,
-  type ListParams,
-} from "@/lib/list-params";
+import { deleteGroupById, insertGroup, renameGroupById } from "@/lib/groups";
+import { parseListParams, pathWithListParams, type ListParams } from "@/lib/list-params";
 
 function readContactForm(formData: FormData) {
   const values = Object.fromEntries(
@@ -164,9 +156,7 @@ export async function deleteContact(
   // Already deleted (e.g. in another tab): the contact is gone either way, so no message.
   // The same list opens again, with its group and search.
   const list = readListParams(listParams);
-  redirect(
-    pathWithListParams("/", list, name === null ? {} : { deleted: name }),
-  );
+  redirect(pathWithListParams("/", list, name === null ? {} : { deleted: name }));
 }
 
 export async function addNote(

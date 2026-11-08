@@ -4,24 +4,15 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  initialCreateGroupState,
-  type CreateGroupState,
-} from "@/lib/group-form";
+import { initialCreateGroupState, type CreateGroupState } from "@/lib/group-form";
 
 /** Form on the "Группы" page that creates a group. */
 export function CreateGroupForm({
   action,
 }: {
-  action: (
-    state: CreateGroupState,
-    formData: FormData,
-  ) => Promise<CreateGroupState>;
+  action: (state: CreateGroupState, formData: FormData) => Promise<CreateGroupState>;
 }) {
-  const [state, formAction, pending] = useActionState(
-    action,
-    initialCreateGroupState,
-  );
+  const [state, formAction, pending] = useActionState(action, initialCreateGroupState);
   const error = state.status === "error" ? state.error : undefined;
 
   return (
@@ -44,11 +35,7 @@ export function CreateGroupForm({
         </Button>
       </div>
       {error && (
-        <p
-          id="new-group-name-error"
-          role="alert"
-          className="text-sm text-destructive"
-        >
+        <p id="new-group-name-error" role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}

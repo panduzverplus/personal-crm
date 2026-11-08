@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  contactFormFrom,
-  emptyContactForm,
-  parseGroupIds,
-} from "./contact-form";
+import { contactFormFrom, emptyContactForm, parseGroupIds } from "./contact-form";
 
 describe("parseGroupIds", () => {
   it("returns an empty list when nothing is checked", () => {

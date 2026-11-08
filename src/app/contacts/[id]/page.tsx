@@ -13,27 +13,15 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { getContactWithNotes, parseContactId } from "@/lib/contacts";
 import { formatDate, formatDateTime, pluralize } from "@/lib/format";
-import {
-  dueDate,
-  frequencyTitle,
-  isOverdue,
-  type ContactFrequency,
-} from "@/lib/keep-in-touch";
-import {
-  isListNarrowed,
-  parseListParams,
-  pathWithListParams,
-} from "@/lib/list-params";
+import { dueDate, frequencyTitle, isOverdue, type ContactFrequency } from "@/lib/keep-in-touch";
+import { isListNarrowed, parseListParams, pathWithListParams } from "@/lib/list-params";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Карточка контакта",
 };
 
-export default function ContactPage({
-  params,
-  searchParams,
-}: PageProps<"/contacts/[id]">) {
+export default function ContactPage({ params, searchParams }: PageProps<"/contacts/[id]">) {
   return (
     <div className="flex flex-col gap-6">
       <Suspense fallback={<ContactCardSkeleton />}>
@@ -77,15 +65,10 @@ async function ContactCard({
 
       <section className="flex flex-col gap-6 rounded-card border p-5 md:gap-8 md:p-7">
         <div className="flex flex-wrap items-start gap-4">
-          <ContactAvatar
-            name={contact.name}
-            className="size-14 text-lg md:size-16"
-          />
+          <ContactAvatar name={contact.name} className="size-14 text-lg md:size-16" />
           <div className="min-w-0 flex-1 basis-48 self-center">
             <h1 className="text-h1 font-light break-words">{contact.name}</h1>
-            {contact.about && (
-              <p className="mt-2 text-muted-foreground">{contact.about}</p>
-            )}
+            {contact.about && <p className="mt-2 text-muted-foreground">{contact.about}</p>}
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
@@ -172,9 +155,7 @@ async function ContactCard({
                 createdAt={note.createdAt.toISOString()}
                 createdLabel={formatDateTime(note.createdAt)}
                 updatedAt={note.updatedAt?.toISOString() ?? null}
-                updatedLabel={
-                  note.updatedAt ? formatDateTime(note.updatedAt) : null
-                }
+                updatedLabel={note.updatedAt ? formatDateTime(note.updatedAt) : null}
                 action={updateNote.bind(null, note.id)}
               />
             ))}
@@ -188,26 +169,14 @@ async function ContactCard({
 /** E.g. "Раз в месяц · связаться до 3 ноября 2026 г." or "Раз в месяц · пора связаться". */
 function keepInTouchStatus(frequency: ContactFrequency, lastContact: Date) {
   const due = dueDate(lastContact, frequency);
-  const status = isOverdue(due, new Date())
-    ? "пора связаться"
-    : `связаться до ${formatDate(due)}`;
+  const status = isOverdue(due, new Date()) ? "пора связаться" : `связаться до ${formatDate(due)}`;
   return `${frequencyTitle(frequency)} · ${status}`;
 }
 
-function Detail({
-  label,
-  wide,
-  children,
-}: {
-  label: string;
-  wide?: boolean;
-  children: ReactNode;
-}) {
+function Detail({ label, wide, children }: { label: string; wide?: boolean; children: ReactNode }) {
   return (
     <div className={cn("min-w-0 border-t pt-3", wide && "sm:col-span-2")}>
-      <dt className="font-mono text-meta text-muted-foreground uppercase">
-        {label}
-      </dt>
+      <dt className="font-mono text-meta text-muted-foreground uppercase">{label}</dt>
       <dd className="mt-1">
         {children || <span className="text-muted-foreground">не указано</span>}
       </dd>

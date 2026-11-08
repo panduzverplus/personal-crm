@@ -12,10 +12,7 @@ const byName = sql`${groups.name} collate "ru-x-icu"`;
 export async function listGroups() {
   await connection();
 
-  return db
-    .select({ id: groups.id, name: groups.name })
-    .from(groups)
-    .orderBy(byName, groups.id);
+  return db.select({ id: groups.id, name: groups.name }).from(groups).orderBy(byName, groups.id);
 }
 
 /** All groups in alphabetical order, each with the number of its contacts (0 for an empty one). */
@@ -35,8 +32,7 @@ export async function listGroupsWithCounts() {
 }
 
 export type InsertGroupResult =
-  | { status: "created"; group: { id: number; name: string } }
-  | { status: "duplicate" };
+  { status: "created"; group: { id: number; name: string } } | { status: "duplicate" };
 
 /** Creates a group; `name` is already checked. A name that exists in any letter case is a duplicate. */
 export async function insertGroup(name: string): Promise<InsertGroupResult> {
@@ -56,15 +52,10 @@ export async function insertGroup(name: string): Promise<InsertGroupResult> {
 }
 
 export type RenameGroupResult =
-  | { status: "renamed" }
-  | { status: "duplicate" }
-  | { status: "not-found" };
+  { status: "renamed" } | { status: "duplicate" } | { status: "not-found" };
 
 /** Renames a group; `name` is already checked. Its contacts stay in it. */
-export async function renameGroupById(
-  id: number,
-  name: string,
-): Promise<RenameGroupResult> {
+export async function renameGroupById(id: number, name: string): Promise<RenameGroupResult> {
   try {
     const rows = await db
       .update(groups)
@@ -85,9 +76,6 @@ export async function renameGroupById(
  * Returns false when the group does not exist.
  */
 export async function deleteGroupById(id: number) {
-  const rows = await db
-    .delete(groups)
-    .where(eq(groups.id, id))
-    .returning({ id: groups.id });
+  const rows = await db.delete(groups).where(eq(groups.id, id)).returning({ id: groups.id });
   return rows.length > 0;
 }

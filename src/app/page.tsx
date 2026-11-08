@@ -16,10 +16,7 @@ export default function ContactsPage({ searchParams }: PageProps<"/">) {
         {/* On phones the button spans the screen, as on the landing */}
         <Link
           href="/contacts/new"
-          className={cn(
-            buttonVariants({ size: "lg" }),
-            "max-md:w-full max-md:justify-between",
-          )}
+          className={cn(buttonVariants({ size: "lg" }), "max-md:w-full max-md:justify-between")}
         >
           Добавить контакт
           <ButtonBadge>

@@ -69,9 +69,7 @@ describe("insertContact", () => {
     try {
       await expect(insertContact({ name: "Анна" }, [family])).rejects.toThrow();
     } finally {
-      await db.execute(
-        sql`alter table contact_groups drop constraint contact_groups_fail`,
-      );
+      await db.execute(sql`alter table contact_groups drop constraint contact_groups_fail`);
     }
 
     expect(await db.select().from(contacts)).toEqual([]);
@@ -87,11 +85,7 @@ describe("updateContactById", () => {
     const friends = await addGroup("Друзья");
     const id = await insertContact({ name: "Анна" }, [family, tennis]);
 
-    const updated = await updateContactById(
-      id,
-      { name: "Анна", ...noFields },
-      [friends, tennis],
-    );
+    const updated = await updateContactById(id, { name: "Анна", ...noFields }, [friends, tennis]);
 
     expect(updated).toBe(true);
     expect(await groupIdsOf(id)).toEqual([tennis, friends]);
@@ -121,10 +115,7 @@ describe("updateContactById", () => {
     const family = await addGroup("Семья");
     const id = await insertContact({ name: "Анна" }, []);
 
-    await updateContactById(id, { name: "Анна Петрова", ...noFields }, [
-      family,
-      12345,
-    ]);
+    await updateContactById(id, { name: "Анна Петрова", ...noFields }, [family, 12345]);
 
     const [row] = await db.select().from(contacts);
     expect(row.name).toBe("Анна Петрова");
@@ -146,11 +137,7 @@ describe("updateContactById", () => {
     const family = await addGroup("Семья");
     await addContact("Борис");
 
-    const updated = await updateContactById(
-      12345,
-      { name: "Анна", ...noFields },
-      [family],
-    );
+    const updated = await updateContactById(12345, { name: "Анна", ...noFields }, [family]);
 
     expect(updated).toBe(false);
     expect(await db.select().from(contactGroups)).toEqual([]);
@@ -301,11 +288,7 @@ describe("getOverdueContacts", () => {
 
     const overdue = await getOverdueContacts(null);
 
-    expect(overdue.map((contact) => contact.name)).toEqual([
-      "Анна",
-      "Борис",
-      "Вера",
-    ]);
+    expect(overdue.map((contact) => contact.name)).toEqual(["Анна", "Борис", "Вера"]);
   });
 
   it("with a group returns only overdue contacts from it", async () => {
@@ -338,12 +321,7 @@ describe("getOverdueContacts", () => {
 
     const overdue = await getOverdueContacts(tennis);
 
-    expect(overdue.map((contact) => contact.name)).toEqual([
-      "Вера",
-      "Анна",
-      "Борис",
-      "Яна",
-    ]);
+    expect(overdue.map((contact) => contact.name)).toEqual(["Вера", "Анна", "Борис", "Яна"]);
   });
 
   it("returns a contact of several groups once for each of them", async () => {
@@ -406,10 +384,7 @@ describe("contact groups", () => {
 
     const data = await getContactWithNotes(anna);
 
-    expect(data?.groups.map((group) => group.name)).toEqual([
-      "Семья",
-      "Теннис",
-    ]);
+    expect(data?.groups.map((group) => group.name)).toEqual(["Семья", "Теннис"]);
   });
 
   it("getContactWithNotes returns no groups for a contact without them", async () => {

@@ -8,18 +8,12 @@ import { resetDatabase } from "@/test/db";
 const uniqueViolation = { cause: { code: "23505" } };
 
 async function addContact(name: string) {
-  const [row] = await db
-    .insert(contacts)
-    .values({ name })
-    .returning({ id: contacts.id });
+  const [row] = await db.insert(contacts).values({ name }).returning({ id: contacts.id });
   return row.id;
 }
 
 async function addGroup(name: string) {
-  const [row] = await db
-    .insert(groups)
-    .values({ name })
-    .returning({ id: groups.id });
+  const [row] = await db.insert(groups).values({ name }).returning({ id: groups.id });
   return row.id;
 }
 
@@ -54,9 +48,7 @@ describe("groups schema", () => {
     await db.delete(groups).where(eq(groups.id, tennis));
 
     expect(await db.select().from(contacts)).toHaveLength(1);
-    expect(await db.select().from(contactGroups)).toEqual([
-      { contactId: anna, groupId: family },
-    ]);
+    expect(await db.select().from(contactGroups)).toEqual([{ contactId: anna, groupId: family }]);
   });
 
   it("does not store a second group differing only by letter case", async () => {

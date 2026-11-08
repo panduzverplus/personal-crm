@@ -12,11 +12,7 @@ const optionalText = (max: number, tooLongMessage: string) =>
     .transform((value) => value || null);
 
 export const contactSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Укажите имя")
-    .max(200, "Имя не длиннее 200 символов"),
+  name: z.string().trim().min(1, "Укажите имя").max(200, "Имя не длиннее 200 символов"),
   about: optionalText(500, "Не длиннее 500 символов"),
   howWeMet: optionalText(500, "Не длиннее 500 символов"),
   phone: optionalText(50, "Телефон не длиннее 50 символов"),
@@ -117,6 +113,4 @@ export type AddNoteState =
 export const initialAddNoteState: AddNoteState = { status: "idle", body: "" };
 
 export type EditNoteState =
-  | { status: "idle" }
-  | { status: "saved" }
-  | { status: "error"; body: string; error: string };
+  { status: "idle" } | { status: "saved" } | { status: "error"; body: string; error: string };

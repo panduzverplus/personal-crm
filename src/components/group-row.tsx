@@ -8,10 +8,7 @@ import { Label } from "@/components/ui/label";
 import { pluralize } from "@/lib/format";
 import type { DeleteGroupState, RenameGroupState } from "@/lib/group-form";
 
-type RenameGroupAction = (
-  state: RenameGroupState,
-  formData: FormData,
-) => Promise<RenameGroupState>;
+type RenameGroupAction = (state: RenameGroupState, formData: FormData) => Promise<RenameGroupState>;
 
 /** One group on the "Группы" page: name, contact count, and the rename and delete buttons. */
 export function GroupRow({
@@ -54,11 +51,7 @@ export function GroupRow({
             >
               Изменить
             </Button>
-            <DeleteGroupButton
-              groupName={name}
-              contactCount={contactCount}
-              action={deleteAction}
-            />
+            <DeleteGroupButton groupName={name} contactCount={contactCount} action={deleteAction} />
           </div>
         </div>
       )}
@@ -77,10 +70,7 @@ function GroupNameEditor({
   action: RenameGroupAction;
   onClose: () => void;
 }) {
-  const [state, formAction, pending] = useActionState<
-    RenameGroupState,
-    FormData
-  >(
+  const [state, formAction, pending] = useActionState<RenameGroupState, FormData>(
     async (previous, formData) => {
       const result = await action(previous, formData);
       if (result.status === "saved") onClose();
@@ -123,13 +113,7 @@ function GroupNameEditor({
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? "Сохраняю…" : "Сохранить"}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={pending}
-          onClick={onClose}
-        >
+        <Button type="button" variant="outline" size="sm" disabled={pending} onClick={onClose}>
           Отмена
         </Button>
       </div>

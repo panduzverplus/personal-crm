@@ -86,9 +86,7 @@ describe("insertGroup", () => {
       status: "created",
       group: { id: expect.any(Number), name: "Коллеги" },
     });
-    expect((await listGroups()).map((group) => group.name)).toEqual([
-      "Коллеги",
-    ]);
+    expect((await listGroups()).map((group) => group.name)).toEqual(["Коллеги"]);
   });
 
   it("puts the new group in alphabetical order", async () => {
@@ -140,9 +138,7 @@ describe("renameGroupById", () => {
 
     await renameGroupById(id, "Большой теннис");
 
-    expect(await listGroupsWithCounts()).toEqual([
-      { id, name: "Большой теннис", contactCount: 1 },
-    ]);
+    expect(await listGroupsWithCounts()).toEqual([{ id, name: "Большой теннис", contactCount: 1 }]);
   });
 
   it("lets a group change only the letter case of its own name", async () => {
@@ -165,10 +161,7 @@ describe("renameGroupById", () => {
     expect(await renameGroupById(friends, "семья")).toEqual({
       status: "duplicate",
     });
-    expect((await listGroups()).map((group) => group.name)).toEqual([
-      "Друзья",
-      "Семья",
-    ]);
+    expect((await listGroups()).map((group) => group.name)).toEqual(["Друзья", "Семья"]);
   });
 
   it("reports a group that does not exist", async () => {
@@ -192,9 +185,7 @@ describe("deleteGroupById", () => {
 
     expect(await listGroups()).toEqual([{ id: family, name: "Семья" }]);
     expect(await db.select().from(contacts)).toHaveLength(1);
-    expect(await db.select().from(contactGroups)).toEqual([
-      { contactId: anna, groupId: family },
-    ]);
+    expect(await db.select().from(contactGroups)).toEqual([{ contactId: anna, groupId: family }]);
   });
 
   it("returns false when the group does not exist", async () => {

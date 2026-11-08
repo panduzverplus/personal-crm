@@ -77,9 +77,7 @@ test("add a contact, find it by name, write a note, see the same data in another
 
     await contactRow(page, NEW_CONTACT.name).getByRole("link").click();
 
-    await expect(
-      page.getByRole("heading", { level: 1, name: NEW_CONTACT.name }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: NEW_CONTACT.name })).toBeVisible();
     await expect(visibleText(page, NEW_CONTACT.about)).toBeVisible();
     await expect(visibleText(page, NEW_CONTACT.howWeMet)).toBeVisible();
     await expect(visibleText(page, NEW_CONTACT.phone)).toBeVisible();

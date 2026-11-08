@@ -62,9 +62,7 @@ describe("listQueryString", () => {
   });
 
   it("contains only the query", () => {
-    expect(listQueryString({ group: null, q: "Анна" })).toBe(
-      `?q=${encodeURIComponent("Анна")}`,
-    );
+    expect(listQueryString({ group: null, q: "Анна" })).toBe(`?q=${encodeURIComponent("Анна")}`);
   });
 
   it("contains both, group first", () => {
@@ -100,9 +98,7 @@ describe("isListNarrowed", () => {
 
 describe("pathWithListParams", () => {
   it("leaves the path alone when the list is not narrowed", () => {
-    expect(pathWithListParams("/contacts/5", { group: null, q: "" })).toBe(
-      "/contacts/5",
-    );
+    expect(pathWithListParams("/contacts/5", { group: null, q: "" })).toBe("/contacts/5");
   });
 
   it("adds the group and the query", () => {
@@ -112,15 +108,15 @@ describe("pathWithListParams", () => {
   });
 
   it("adds extra parameters after the list parameters", () => {
-    expect(
-      pathWithListParams("/contacts/5", { group: 3, q: "" }, { updated: "1" }),
-    ).toBe("/contacts/5?group=3&updated=1");
+    expect(pathWithListParams("/contacts/5", { group: 3, q: "" }, { updated: "1" })).toBe(
+      "/contacts/5?group=3&updated=1",
+    );
   });
 
   it("starts the query with a question mark when only extra parameters are given", () => {
-    expect(
-      pathWithListParams("/", { group: null, q: "" }, { deleted: "Анна" }),
-    ).toBe(`/?deleted=${encodeURIComponent("Анна")}`);
+    expect(pathWithListParams("/", { group: null, q: "" }, { deleted: "Анна" })).toBe(
+      `/?deleted=${encodeURIComponent("Анна")}`,
+    );
   });
 
   it("encodes extra values", () => {

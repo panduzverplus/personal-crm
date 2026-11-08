@@ -8,9 +8,7 @@ export default function NotFound() {
     <div className="flex flex-col items-center gap-5 rounded-card border px-6 py-12 text-center">
       <BigLetter />
       <h1 className="text-h2 font-light">Такой страницы нет</h1>
-      <p className="text-muted-foreground">
-        Возможно, ссылка устарела или в адресе опечатка.
-      </p>
+      <p className="text-muted-foreground">Возможно, ссылка устарела или в адресе опечатка.</p>
       <Link href="/" className={cn(buttonVariants({ variant: "outline" }))}>
         К списку контактов
       </Link>

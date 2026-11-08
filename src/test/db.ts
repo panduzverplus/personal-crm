@@ -3,9 +3,7 @@ import { db } from "@/db";
 import { isTestDatabaseName } from "./test-database-url";
 
 async function currentDatabaseName() {
-  const rows = await db.execute<{ name: string }>(
-    sql`select current_database() as name`,
-  );
+  const rows = await db.execute<{ name: string }>(sql`select current_database() as name`);
   return rows[0].name;
 }
 
@@ -13,9 +11,7 @@ async function currentDatabaseName() {
 export async function assertTestDatabase() {
   const name = await currentDatabaseName();
   if (!isTestDatabaseName(name)) {
-    throw new Error(
-      `Refusing to touch "${name}": its name does not end with "_test"`,
-    );
+    throw new Error(`Refusing to touch "${name}": its name does not end with "_test"`);
   }
 }
 

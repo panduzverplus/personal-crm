@@ -1,24 +1,8 @@
 import "server-only";
-import {
-  and,
-  count,
-  desc,
-  eq,
-  inArray,
-  isNotNull,
-  max,
-  sql,
-  type SQL,
-} from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, max, sql, type SQL } from "drizzle-orm";
 import { connection } from "next/server";
 import { db } from "@/db";
-import {
-  contactGroups,
-  contacts,
-  groups,
-  notes,
-  type NewContact,
-} from "@/db/schema";
+import { contactGroups, contacts, groups, notes, type NewContact } from "@/db/schema";
 import type { ContactInput } from "@/lib/contact-form";
 import { dueDate, isOverdue } from "@/lib/keep-in-touch";
 
@@ -38,11 +22,7 @@ function nameMatchesQuery(query: string): SQL | undefined {
     return undefined;
   }
   const normalizedName = sql`replace(lower(${contacts.name}), 'ё', 'е')`;
-  return and(
-    ...words.map(
-      (word) => sql`${normalizedName} like ${`%${escapeLikePattern(word)}%`}`,
-    ),
-  );
+  return and(...words.map((word) => sql`${normalizedName} like ${`%${escapeLikePattern(word)}%`}`));
 }
 
 // Drizzle drops the table name from columns in a single-table query, so inside a subquery
@@ -84,28 +64,18 @@ export async function searchContacts(query: string, groupId: number | null) {
         ), '{}')`,
       })
       .from(contacts)
-      .where(
-        and(
-          nameMatchesQuery(query),
-          groupId === null ? undefined : isInGroup(groupId),
-        ),
-      )
+      .where(and(nameMatchesQuery(query), groupId === null ? undefined : isInGroup(groupId)))
       .orderBy(sql`${contacts.name} collate "ru-x-icu"`, contacts.id),
     db.select({ total: count() }).from(contacts),
     groupId === null
       ? undefined
-      : db
-          .select({ total: count() })
-          .from(contactGroups)
-          .where(eq(contactGroups.groupId, groupId)),
+      : db.select({ total: count() }).from(contactGroups).where(eq(contactGroups.groupId, groupId)),
   ]);
 
   return { items, total, groupTotal: groupTotal ? groupTotal[0].total : total };
 }
 
-export type ContactListItem = Awaited<
-  ReturnType<typeof searchContacts>
->["items"][number];
+export type ContactListItem = Awaited<ReturnType<typeof searchContacts>>["items"][number];
 
 /**
  * Contacts with a frequency whose due day has passed: the most overdue first,
@@ -127,10 +97,7 @@ export async function getOverdueContacts(groupId: number | null) {
     .from(contacts)
     .leftJoin(notes, eq(notes.contactId, contacts.id))
     .where(
-      and(
-        isNotNull(contacts.contactFrequency),
-        groupId === null ? undefined : isInGroup(groupId),
-      ),
+      and(isNotNull(contacts.contactFrequency), groupId === null ? undefined : isInGroup(groupId)),
     )
     .groupBy(contacts.id);
 
@@ -141,15 +108,10 @@ export async function getOverdueContacts(groupId: number | null) {
       const due = dueDate(contact.lastNoteAt ?? createdAt, frequency);
       return isOverdue(due, today) ? [{ ...contact, frequency, due }] : [];
     })
-    .sort(
-      (a, b) =>
-        a.due.getTime() - b.due.getTime() || a.name.localeCompare(b.name, "ru"),
-    );
+    .sort((a, b) => a.due.getTime() - b.due.getTime() || a.name.localeCompare(b.name, "ru"));
 }
 
-export type OverdueContact = Awaited<
-  ReturnType<typeof getOverdueContacts>
->[number];
+export type OverdueContact = Awaited<ReturnType<typeof getOverdueContacts>>[number];
 
 /** Turns the `[id]` URL segment into a contact id, or null if it is not a valid id. */
 export function parseContactId(rawId: string) {
@@ -160,11 +122,7 @@ export function parseContactId(rawId: string) {
 export async function getContact(id: number) {
   await connection();
 
-  const [contact] = await db
-    .select()
-    .from(contacts)
-    .where(eq(contacts.id, id))
-    .limit(1);
+  const [contact] = await db.select().from(contacts).where(eq(contacts.id, id)).limit(1);
   return contact ?? null;
 }
 
@@ -204,11 +162,7 @@ type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * Makes `groupIds` the whole set of the contact's groups. A group that no longer exists
  * (deleted in another tab) is skipped, so one stale checkbox does not lose the other changes.
  */
-async function replaceContactGroups(
-  tx: Transaction,
-  contactId: number,
-  groupIds: number[],
-) {
+async function replaceContactGroups(tx: Transaction, contactId: number, groupIds: number[]) {
   await tx.delete(contactGroups).where(eq(contactGroups.contactId, contactId));
   if (groupIds.length === 0) {
     return;
@@ -223,21 +177,14 @@ async function replaceContactGroups(
 /** Saves the contact together with its groups in one transaction; returns the new id. */
 export async function insertContact(values: NewContact, groupIds: number[]) {
   return db.transaction(async (tx) => {
-    const [row] = await tx
-      .insert(contacts)
-      .values(values)
-      .returning({ id: contacts.id });
+    const [row] = await tx.insert(contacts).values(values).returning({ id: contacts.id });
     await replaceContactGroups(tx, row.id, groupIds);
     return row.id;
   });
 }
 
 /** Saves the contact and replaces its groups in one transaction. Returns false when the contact does not exist. */
-export async function updateContactById(
-  id: number,
-  values: ContactInput,
-  groupIds: number[],
-) {
+export async function updateContactById(id: number, values: ContactInput, groupIds: number[]) {
   return db.transaction(async (tx) => {
     const rows = await tx
       .update(contacts)

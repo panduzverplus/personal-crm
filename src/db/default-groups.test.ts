@@ -1,9 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import postgres from "postgres";
-import {
-  createMigratedDatabase,
-  dropTestDatabase,
-} from "@/test/migrated-database";
+import { createMigratedDatabase, dropTestDatabase } from "@/test/migrated-database";
 
 // Other tests empty the shared test database, so the seeded groups are checked
 // in their own throwaway database that has only been migrated.

@@ -96,6 +96,8 @@ pnpm start
 | `pnpm test:e2e`    | прогнать e2e-тесты в браузере (нужна запущенная база: `pnpm db:up`) |
 | `pnpm lint`        | проверить код линтером                                         |
 | `pnpm typecheck`   | проверить типы TypeScript                                      |
+| `pnpm format`      | привести оформление кода к единому виду (Prettier)             |
+| `pnpm format:check` | проверить оформление кода, ничего не меняя                    |
 
 ## Тесты
 

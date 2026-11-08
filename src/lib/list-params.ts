@@ -27,9 +27,7 @@ export function parseGroupId(value: unknown) {
 }
 
 /** Reads `group` and `q` from page search params; anything invalid counts as not set. */
-export function parseListParams(
-  searchParams: Record<string, SearchParamValue>,
-): ListParams {
+export function parseListParams(searchParams: Record<string, SearchParamValue>): ListParams {
   return {
     group: parseGroupId(firstValue(searchParams.group)),
     q: (firstValue(searchParams.q) ?? "").trim(),

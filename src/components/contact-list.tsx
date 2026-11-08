@@ -12,11 +12,7 @@ import type { GroupRef } from "@/lib/group-form";
 import { listQueryString } from "@/lib/list-params";
 import { cn } from "@/lib/utils";
 
-const CONTACT_FORMS: [string, string, string] = [
-  "контакт",
-  "контакта",
-  "контактов",
-];
+const CONTACT_FORMS: [string, string, string] = ["контакт", "контакта", "контактов"];
 
 const firstValue = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
@@ -36,20 +32,13 @@ export async function ContactList({
   const addedId = Number(firstValue(params.added));
   const deletedName = (firstValue(params.deleted) ?? "").trim();
 
-  const { items, total, groupTotal } = await searchContacts(
-    query,
-    group?.id ?? null,
-  );
-  const added = query
-    ? undefined
-    : items.find((contact) => contact.id === addedId);
+  const { items, total, groupTotal } = await searchContacts(query, group?.id ?? null);
+  const added = query ? undefined : items.find((contact) => contact.id === addedId);
 
   const deletedAlert = deletedName && (
     <Alert variant="success">
       <CircleCheckIcon />
-      <AlertTitle className="break-words">
-        Контакт «{deletedName}» удалён
-      </AlertTitle>
+      <AlertTitle className="break-words">Контакт «{deletedName}» удалён</AlertTitle>
     </Alert>
   );
 
@@ -59,9 +48,7 @@ export async function ContactList({
         {deletedAlert}
         <div className="flex flex-col items-center gap-5 rounded-card border px-6 py-12 text-center">
           <BigLetter />
-          <p className="text-muted-foreground">
-            Пока нет ни одного контакта.
-          </p>
+          <p className="text-muted-foreground">Пока нет ни одного контакта.</p>
           <Link href="/contacts/new" className={cn(buttonVariants())}>
             Добавить первый контакт
             <ButtonBadge>
@@ -94,18 +81,14 @@ export async function ContactList({
             <CircleCheckIcon />
             <AlertTitle>Контакт «{added.name}» добавлен</AlertTitle>
             <AlertDescription>
-              Он подсвечен в списке.{" "}
-              <Link href={`/contacts/${added.id}`}>Открыть карточку</Link>
+              Он подсвечен в списке. <Link href={`/contacts/${added.id}`}>Открыть карточку</Link>
             </AlertDescription>
           </Alert>
           <ScrollIntoView targetId={`contact-${added.id}`} />
         </>
       )}
 
-      <p
-        className="font-mono text-meta text-muted-foreground uppercase"
-        aria-live="polite"
-      >
+      <p className="font-mono text-meta text-muted-foreground uppercase" aria-live="polite">
         {query
           ? `Найдено: ${pluralize(items.length, CONTACT_FORMS)} из ${groupTotal.toLocaleString("ru-RU")}`
           : group
@@ -160,9 +143,7 @@ function ContactRow({
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold">{contact.name}</div>
           {contact.about && (
-            <div className="truncate text-sm text-muted-foreground">
-              {contact.about}
-            </div>
+            <div className="truncate text-sm text-muted-foreground">{contact.about}</div>
           )}
           {contact.groups.length > 0 && (
             // Small text on one line, cut off when long, so the row stays compact.

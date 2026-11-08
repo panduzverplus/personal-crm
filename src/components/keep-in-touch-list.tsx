@@ -9,11 +9,7 @@ import { pluralize } from "@/lib/format";
 
 const VISIBLE_ROWS = 5;
 
-const CONTACT_FORMS: [string, string, string] = [
-  "контакт",
-  "контакта",
-  "контактов",
-];
+const CONTACT_FORMS: [string, string, string] = ["контакт", "контакта", "контактов"];
 
 export type KeepInTouchRow = { id: number; name: string; details: string };
 
@@ -68,9 +64,7 @@ export function KeepInTouchList({
               <ContactAvatar name={row.name} />
               <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold">{row.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {row.details}
-                </div>
+                <div className="text-sm text-muted-foreground">{row.details}</div>
               </div>
             </a>
           </li>

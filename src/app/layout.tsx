@@ -45,10 +45,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <header className="mx-auto w-full max-w-3xl px-5.5 pt-5.5 md:px-8 md:pt-7">
           <div className="flex items-center justify-between gap-4 border-b pb-3.5 md:pb-4">
-            <Link
-              href="/"
-              className="font-heading text-logo font-medium hover:opacity-85"
-            >
+            <Link href="/" className="font-heading text-logo font-medium hover:opacity-85">
               {/* Red "Ч" as the big letter on the landing */}
               <span className="text-brand">Ч</span>игабугадага
             </Link>

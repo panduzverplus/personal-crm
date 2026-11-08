@@ -1,12 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import {
-  useRef,
-  type ComponentProps,
-  type MouseEvent,
-  type SyntheticEvent,
-} from "react";
+import { useRef, type ComponentProps, type MouseEvent, type SyntheticEvent } from "react";
 
 /** The link the event came from, if it leads to a page of this app in the same tab. */
 function appLinkOf(event: SyntheticEvent) {

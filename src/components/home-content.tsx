@@ -22,11 +22,7 @@ export async function HomeContent({
 
   return (
     <ListControlsProvider group={group?.id ?? null} query={q}>
-      <GroupFilter
-        groups={groups}
-        activeGroup={group?.id ?? null}
-        query={q}
-      />
+      <GroupFilter groups={groups} activeGroup={group?.id ?? null} query={q} />
       <KeepInTouch
         groupId={group?.id ?? null}
         listQuery={listQueryString({ group: group?.id ?? null, q })}

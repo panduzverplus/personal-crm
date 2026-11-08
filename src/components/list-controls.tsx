@@ -46,9 +46,7 @@ export function ListControlsProvider({
 
   // The refs never change, so neither does the context value.
   const controls = useMemo(() => ({ queryRef, groupRef }), []);
-  return (
-    <ListControlsContext value={controls}>{children}</ListControlsContext>
-  );
+  return <ListControlsContext value={controls}>{children}</ListControlsContext>;
 }
 
 export function useListControls() {

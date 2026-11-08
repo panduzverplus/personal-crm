@@ -78,10 +78,7 @@ export function GroupFilter({
           </Link>
         );
       })}
-      <Link
-        href="/groups"
-        className={cn(buttonVariants({ variant: "link", size: "sm" }))}
-      >
+      <Link href="/groups" className={cn(buttonVariants({ variant: "link", size: "sm" }))}>
         Настроить группы
       </Link>
     </nav>
@@ -92,10 +89,7 @@ export function GroupFilterSkeleton() {
   return (
     <div className="flex flex-wrap items-center gap-2" aria-busy="true">
       {Array.from({ length: 5 }, (_, index) => (
-        <span
-          key={index}
-          className="h-8 w-20 animate-pulse rounded-full bg-skeleton/60"
-        />
+        <span key={index} className="h-8 w-20 animate-pulse rounded-full bg-skeleton/60" />
       ))}
     </div>
   );
