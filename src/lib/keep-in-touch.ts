@@ -1,6 +1,7 @@
 import type { Contact } from "@/db/schema";
+import { formatDate } from "@/lib/format";
 
-// No runtime imports: the contact form (a client component) uses the labels too.
+// No server-only imports: the contact form (a client component) uses the labels too.
 
 export type ContactFrequency = NonNullable<Contact["contactFrequency"]>;
 
@@ -50,4 +51,17 @@ const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(),
 /** Overdue once today is a later calendar day than the due day; the due day itself is not. */
 export function isOverdue(due: Date, today: Date) {
   return startOfDay(today) > startOfDay(due);
+}
+
+/** E.g. "Раз в месяц · связаться до 3 ноября 2026 г." or "Раз в месяц · пора связаться". */
+export function keepInTouchStatus(frequency: ContactFrequency, lastContact: Date, today: Date) {
+  const due = dueDate(lastContact, frequency);
+  const status = isOverdue(due, today) ? "пора связаться" : `связаться до ${formatDate(due)}`;
+  return `${frequencyTitle(frequency)} · ${status}`;
+}
+
+/** E.g. "раз в месяц · последняя заметка 3 сентября 2026 г." or "раз в неделю · заметок пока нет". */
+export function overdueRowDetails(frequency: ContactFrequency, lastNoteAt: Date | null) {
+  const notes = lastNoteAt ? `последняя заметка ${formatDate(lastNoteAt)}` : "заметок пока нет";
+  return `${frequencyInline(frequency)} · ${notes}`;
 }

@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { contactGroups, contacts, groups, type NewContact } from "@/db/schema";
+import { contactGroups, contacts, groups, notes, type NewContact } from "@/db/schema";
 
 // Helpers that put rows into the test database.
 
@@ -8,6 +8,15 @@ export async function addContact(name: string, values: Partial<Omit<NewContact, 
     .insert(contacts)
     .values({ name, ...values })
     .returning({ id: contacts.id });
+  return row.id;
+}
+
+/** A note written at the given moment, for tests about older notes. */
+export async function addNote(contactId: number, createdAt: Date, body = "Заметка") {
+  const [row] = await db
+    .insert(notes)
+    .values({ contactId, body, createdAt })
+    .returning({ id: notes.id });
   return row.id;
 }
 

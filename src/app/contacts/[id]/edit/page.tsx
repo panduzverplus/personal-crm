@@ -49,6 +49,10 @@ async function EditContact({
   }
 
   const cardPath = pathWithListParams(`/contacts/${contact.id}`, list);
+  const initialState = contactFormFrom(
+    contact,
+    contactGroups.map((group) => group.id),
+  );
 
   return (
     <>
@@ -56,11 +60,11 @@ async function EditContact({
       <div className="rounded-card border p-5 md:p-7">
         <h1 className="mb-6 text-h1 font-light md:mb-8">Изменить контакт</h1>
         <ContactForm
+          // Next.js keeps a visited page alive, and the form remembers its first state:
+          // when the saved contact changes, start a new form so it shows the saved data.
+          key={JSON.stringify(initialState)}
           action={updateContact.bind(null, contact.id, list)}
-          initialState={contactFormFrom(
-            contact,
-            contactGroups.map((group) => group.id),
-          )}
+          initialState={initialState}
           groups={groups}
           createGroupAction={createGroup}
           submitLabel="Сохранить изменения"
