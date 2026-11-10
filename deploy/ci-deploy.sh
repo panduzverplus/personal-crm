@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs on the GitHub Actions runner: copies the deploy files to the server and runs deploy.sh there.
+# Runs on the GitHub Actions runner: copies the deploy folder to the server and runs deploy.sh there.
 set -euo pipefail
 
 : "${DEPLOY_HOST:?}" "${DEPLOY_USER:?}" "${DEPLOY_KNOWN_HOSTS:?}" "${DEPLOY_SSH_KEY:?}"
@@ -18,7 +18,9 @@ ssh_opts=(-i "$tmp/key" -o IdentitiesOnly=yes -o BatchMode=yes
   -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$tmp/known_hosts")
 target="$DEPLOY_USER@$DEPLOY_HOST"
 
-ssh "${ssh_opts[@]}" "$target" 'mkdir -p ~/personal-crm'
-scp "${ssh_opts[@]}" "$here/compose.yaml" "$here/deploy.sh" "$target:personal-crm/"
+# Copy the whole deploy/ folder, so a new script reaches the server by itself.
+# Server-only files (.env, current-image, previous-image, backups/) are not in the repo and stay untouched.
+tar -C "$here" -cf - . \
+  | ssh "${ssh_opts[@]}" "$target" 'mkdir -p ~/personal-crm && tar -C ~/personal-crm --no-same-owner --no-overwrite-dir -xf -'
 printf '%s' "$GHCR_TOKEN" \
   | ssh "${ssh_opts[@]}" "$target" "GHCR_USER='$GHCR_USER' bash ~/personal-crm/deploy.sh '$IMAGE' --pull"

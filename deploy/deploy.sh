@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
-# Runs on the server: get the image, apply migrations, start the new image, smoke-check /health.
+# Runs on the server: get the image, back up the database, apply migrations, start the new image,
+# smoke-check /health.
 # Usage: deploy.sh <image> [--pull]
 #   --pull  read a GHCR token from stdin and pull the image (used by CI)
 #   without --pull the image must already be on the server, e.g. a manual rollback:
 #   bash ~/personal-crm/deploy.sh "$(cat ~/personal-crm/previous-image)"
+# The backup (backup.sh deploy) is named after the version that was running before this deploy:
+#   backups/deploy-<UTC time>-<short SHA>.dump; only the newest KEEP_BACKUPS of them are kept.
 # There is no automatic rollback: any failed step stops the script with a non-zero exit code.
 set -euo pipefail
 
 IMAGE="${1:?usage: deploy.sh <image> [--pull]}"
 PULL="${2:-}"
 REPOSITORY="${IMAGE%:*}"
-HEALTH_URL="https://app.chigabugadaga.ru/health"
+KEEP_BACKUPS=10
 cd "$(dirname "$0")"
-
-step() { printf '\n=== %s ===\n' "$*"; }
-compose() { APP_IMAGE="$IMAGE" docker compose -p prod -f compose.yaml "$@"; }
+# shellcheck source=lib.sh
+source ./lib.sh
 
 [ -f .env ] || { echo "ERROR: $PWD/.env is missing" >&2; exit 1; }
 chmod 600 .env
@@ -29,6 +31,10 @@ elif ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   exit 1
 fi
 
+# Before migrations: if they damage data, this file holds the database as the running version left it.
+# A failed backup stops the deploy. IMAGE is passed for the very first deploy, when current-image is missing.
+IMAGE="$IMAGE" bash ./backup.sh deploy >/dev/null
+
 step "Migrations"
 # Runs in a one-off container from the new image; on failure the app keeps running the old image.
 compose run --rm crm-migrate
@@ -37,17 +43,7 @@ step "Start the new image"
 compose up -d --wait --wait-timeout 120 crm-app
 
 step "Smoke check $HEALTH_URL"
-code=""
-for _ in $(seq 1 30); do
-  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$HEALTH_URL" || true)"
-  [ "$code" = 200 ] && break
-  sleep 2
-done
-if [ "$code" != 200 ]; then
-  echo "ERROR: smoke check failed, $HEALTH_URL answered ${code:-nothing}" >&2
-  exit 1
-fi
-echo "$HEALTH_URL -> 200"
+smoke_check
 
 step "Keep only the current and the previous image"
 current="$(cat current-image 2>/dev/null || true)"
@@ -61,6 +57,12 @@ docker image ls "$REPOSITORY" --format '{{.Repository}}:{{.Tag}}' \
   | xargs -r docker image rm
 echo "current:  $IMAGE"
 echo "previous: ${previous:-none}"
+
+step "Keep only the newest $KEEP_BACKUPS deploy backups"
+# Names start with the UTC time, so sorting by name is sorting by age.
+# Manual backups (manual-*.dump) and copies made by restore.sh (before-restore-*.dump) are never deleted here.
+find "$BACKUP_DIR" -maxdepth 1 -name 'deploy-*.dump' | sort -r | tail -n +$((KEEP_BACKUPS + 1)) | xargs -r rm -f --
+ls -1 "$BACKUP_DIR"
 
 echo
 echo "DEPLOYED $IMAGE"
