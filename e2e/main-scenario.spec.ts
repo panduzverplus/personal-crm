@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { resetContacts } from "./database";
+import { signIn } from "./mailpit";
 
 // The main scenario and its success criteria from specs/01-продуктовая-идея.md.
 
@@ -36,9 +37,13 @@ async function expectAllContactsListed(page: Page) {
   await expect(visibleText(page, "Всего 3 контакта")).toBeVisible();
 }
 
-test.beforeEach(() => resetContacts(EXISTING_CONTACTS));
+test.beforeEach(async ({ page }) => {
+  await resetContacts(EXISTING_CONTACTS);
+  // Without a login the app does not open.
+  await signIn(page);
+});
 
-test("add a contact, find it by name, write a note, see the same data in another browser", async ({
+test("add a contact, find it by name, write a note, see the same data in another browser after logging in there", async ({
   page,
   browser,
 }) => {
@@ -101,7 +106,8 @@ test("add a contact, find it by name, write a note, see the same data in another
     const otherContext = await browser.newContext();
     try {
       const otherPage = await otherContext.newPage();
-
+      // Another browser has no login of its own: the same person logs in there too.
+      await signIn(otherPage);
       await otherPage.goto("/");
       await expectAllContactsListed(otherPage);
 

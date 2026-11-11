@@ -1,5 +1,6 @@
 import { loadEnvConfig } from "@next/env";
 import { defineConfig, devices } from "@playwright/test";
+import { TEST_OWNER_EMAIL } from "./src/test/migrated-database";
 import { getE2eDatabaseUrl } from "./src/test/test-database-url";
 
 // Load .env the same way Next.js does, so tests find the database settings.
@@ -28,7 +29,15 @@ export default defineConfig({
     url: `${baseURL}/health`,
     reuseExistingServer: false,
     timeout: 300_000,
-    // DATABASE_URL wins over POSTGRES_* in src/db/config.ts, so the app never sees the working database.
-    env: { DATABASE_URL: getE2eDatabaseUrl() },
+    env: {
+      // DATABASE_URL wins over POSTGRES_* in src/db/config.ts, so the app never sees the working database.
+      DATABASE_URL: getE2eDatabaseUrl(),
+      // Login: the letters go to Mailpit (compose.yaml, `pnpm db:up`), the links lead back to this server.
+      // Fixed values, so the tests do not depend on the login settings in .env.
+      BETTER_AUTH_URL: baseURL,
+      BETTER_AUTH_SECRET: "e2e-secret-that-is-long-enough-for-better-auth",
+      SMTP_URL: "smtp://127.0.0.1:1025",
+      OWNER_EMAIL: TEST_OWNER_EMAIL,
+    },
   },
 });

@@ -29,6 +29,7 @@ import {
 } from "@/lib/group-form";
 import { deleteGroupById, insertGroup, renameGroupById } from "@/lib/groups";
 import { parseListParams, pathWithListParams, type ListParams } from "@/lib/list-params";
+import { requireUser } from "@/lib/session";
 
 function readContactForm(formData: FormData) {
   const values = Object.fromEntries(
@@ -55,6 +56,7 @@ export async function createContact(
   _previous: ContactFormState,
   formData: FormData,
 ): Promise<ContactFormState> {
+  const user = await requireUser();
   const form = readContactForm(formData);
   if (form.errors) {
     return {
@@ -66,7 +68,7 @@ export async function createContact(
 
   let id: number;
   try {
-    id = await insertContact(form.data, form.groupIds);
+    id = await insertContact(user.id, form.data, form.groupIds);
   } catch (error) {
     console.error("Failed to create contact", error);
     return {
@@ -95,6 +97,7 @@ export async function updateContact(
   _previous: ContactFormState,
   formData: FormData,
 ): Promise<ContactFormState> {
+  const user = await requireUser();
   const form = readContactForm(formData);
   if (form.errors) {
     return {
@@ -107,7 +110,7 @@ export async function updateContact(
   let updated = false;
   if (Number.isInteger(contactId) && contactId > 0) {
     try {
-      updated = await updateContactById(contactId, form.data, form.groupIds);
+      updated = await updateContactById(user.id, contactId, form.data, form.groupIds);
     } catch (error) {
       console.error("Failed to update contact", error);
       return {
@@ -141,10 +144,11 @@ export async function deleteContact(
   contactId: number,
   listParams: ListParams,
 ): Promise<DeleteContactState> {
+  const user = await requireUser();
   let name: string | null = null;
   if (Number.isInteger(contactId) && contactId > 0) {
     try {
-      name = await deleteContactById(contactId);
+      name = await deleteContactById(user.id, contactId);
     } catch (error) {
       console.error("Failed to delete contact", error);
       return { error: "Не удалось удалить контакт. Попробуйте ещё раз." };
@@ -164,6 +168,7 @@ export async function addNote(
   _previous: AddNoteState,
   formData: FormData,
 ): Promise<AddNoteState> {
+  const user = await requireUser();
   const body = String(formData.get("body") ?? "");
 
   if (!Number.isInteger(contactId) || contactId <= 0) {
@@ -176,7 +181,7 @@ export async function addNote(
   }
 
   try {
-    const saved = await insertNote(contactId, parsed.data);
+    const saved = await insertNote(user.id, contactId, parsed.data);
     if (!saved) {
       return { status: "error", body, error: "Контакт не найден" };
     }
@@ -200,6 +205,7 @@ export async function updateNote(
   _previous: EditNoteState,
   formData: FormData,
 ): Promise<EditNoteState> {
+  const user = await requireUser();
   const body = String(formData.get("body") ?? "");
 
   const parsed = noteSchema.safeParse(body);
@@ -210,7 +216,7 @@ export async function updateNote(
   let contactId: number | null = null;
   if (Number.isInteger(noteId) && noteId > 0) {
     try {
-      contactId = await updateNoteBody(noteId, parsed.data);
+      contactId = await updateNoteBody(user.id, noteId, parsed.data);
     } catch (error) {
       console.error("Failed to update note", error);
       return {
@@ -238,6 +244,7 @@ export async function createGroup(
   _previous: CreateGroupState,
   formData: FormData,
 ): Promise<CreateGroupState> {
+  const user = await requireUser();
   const name = String(formData.get("name") ?? "");
 
   const parsed = parseGroupName(name);
@@ -247,7 +254,7 @@ export async function createGroup(
 
   let result;
   try {
-    result = await insertGroup(parsed.name);
+    result = await insertGroup(user.id, parsed.name);
   } catch (error) {
     console.error("Failed to create group", error);
     return {
@@ -269,6 +276,7 @@ export async function renameGroup(
   _previous: RenameGroupState,
   formData: FormData,
 ): Promise<RenameGroupState> {
+  const user = await requireUser();
   const name = String(formData.get("name") ?? "");
 
   const parsed = parseGroupName(name);
@@ -281,7 +289,7 @@ export async function renameGroup(
   };
   if (Number.isInteger(groupId) && groupId > 0) {
     try {
-      result = await renameGroupById(groupId, parsed.name);
+      result = await renameGroupById(user.id, groupId, parsed.name);
     } catch (error) {
       console.error("Failed to rename group", error);
       return {
@@ -303,9 +311,10 @@ export async function renameGroup(
 }
 
 export async function deleteGroup(groupId: number): Promise<DeleteGroupState> {
+  const user = await requireUser();
   if (Number.isInteger(groupId) && groupId > 0) {
     try {
-      await deleteGroupById(groupId);
+      await deleteGroupById(user.id, groupId);
     } catch (error) {
       console.error("Failed to delete group", error);
       return { error: "Не удалось удалить группу. Попробуйте ещё раз." };

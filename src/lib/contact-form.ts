@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidEmail } from "@/lib/email";
 import { contactFrequencies } from "@/lib/keep-in-touch";
 import { parseGroupId } from "@/lib/list-params";
 
@@ -20,10 +21,7 @@ export const contactSchema = z.object({
     .string()
     .trim()
     .max(200, "Почта не длиннее 200 символов")
-    .refine(
-      (value) => value === "" || z.email().safeParse(value).success,
-      "Похоже, в адресе почты ошибка",
-    )
+    .refine((value) => value === "" || isValidEmail(value), "Похоже, в адресе почты ошибка")
     .transform((value) => value || null),
   // An empty value is the "not set" option.
   contactFrequency: z

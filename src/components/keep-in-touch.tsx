@@ -7,14 +7,16 @@ import { overdueRowDetails } from "@/lib/keep-in-touch";
  * With a group selected, it shows only the people of that group.
  */
 export async function KeepInTouch({
+  userId,
   groupId,
   listQuery,
 }: {
+  userId: string;
   groupId: number | null;
   /** The group and search of the page, added to the card links so the card can lead back. */
   listQuery: string;
 }) {
-  const overdue = await getOverdueContacts(groupId);
+  const overdue = await getOverdueContacts(userId, groupId);
   if (overdue.length === 0) {
     return null;
   }

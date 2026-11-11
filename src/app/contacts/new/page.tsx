@@ -6,6 +6,7 @@ import { ContactForm } from "@/components/contact-form";
 import { ContactFormSkeleton } from "@/components/contact-form-skeleton";
 import { emptyContactForm } from "@/lib/contact-form";
 import { listGroups } from "@/lib/groups";
+import { requireUser } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Новый контакт",
@@ -24,7 +25,8 @@ export default function NewContactPage() {
 
 // The form needs the list of groups, which is read from the database on every request.
 async function NewContact() {
-  const groups = await listGroups();
+  const user = await requireUser();
+  const groups = await listGroups(user.id);
 
   return (
     <div className="rounded-card border p-5 md:p-7">

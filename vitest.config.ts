@@ -21,7 +21,12 @@ export default defineConfig({
     globalSetup: ["./src/test/global-setup.ts"],
     // DATABASE_URL wins over POSTGRES_* in src/db/config.ts, so the app code under test
     // connects to the test database and never to the working one.
-    env: { DATABASE_URL: getTestDatabaseUrl() },
+    env: {
+      DATABASE_URL: getTestDatabaseUrl(),
+      // Fixed values, so the tests do not depend on the login settings in .env.
+      BETTER_AUTH_SECRET: "test-secret-that-is-long-enough-for-better-auth",
+      BETTER_AUTH_URL: "http://localhost:3000",
+    },
     // All database tests share one database, so test files run one after another.
     fileParallelism: false,
   },

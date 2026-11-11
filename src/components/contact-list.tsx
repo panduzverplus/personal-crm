@@ -18,10 +18,12 @@ const firstValue = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
 
 export async function ContactList({
+  userId,
   searchParams,
   query,
   group,
 }: {
+  userId: string;
   searchParams: PageProps<"/">["searchParams"];
   query: string;
   /** The selected group; null shows everyone. */
@@ -32,7 +34,7 @@ export async function ContactList({
   const addedId = Number(firstValue(params.added));
   const deletedName = (firstValue(params.deleted) ?? "").trim();
 
-  const { items, total, groupTotal } = await searchContacts(query, group?.id ?? null);
+  const { items, total, groupTotal } = await searchContacts(userId, query, group?.id ?? null);
   const added = query ? undefined : items.find((contact) => contact.id === addedId);
 
   const deletedAlert = deletedName && (

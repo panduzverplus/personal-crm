@@ -1,12 +1,26 @@
+import { randomUUID } from "node:crypto";
 import { db } from "@/db";
-import { contactGroups, contacts, groups, notes, type NewContact } from "@/db/schema";
+import { contactGroups, contacts, groups, notes, users, type NewContact } from "@/db/schema";
 
 // Helpers that put rows into the test database.
 
-export async function addContact(name: string, values: Partial<Omit<NewContact, "name">> = {}) {
+/** A user, like the one Better Auth creates at the first login. Returns the user id. */
+export async function addUser(email: string) {
+  const [row] = await db
+    .insert(users)
+    .values({ id: randomUUID(), name: "", email, emailVerified: true })
+    .returning({ id: users.id });
+  return row.id;
+}
+
+export async function addContact(
+  ownerId: string,
+  name: string,
+  values: Partial<Omit<NewContact, "name" | "ownerId">> = {},
+) {
   const [row] = await db
     .insert(contacts)
-    .values({ name, ...values })
+    .values({ ownerId, name, ...values })
     .returning({ id: contacts.id });
   return row.id;
 }
@@ -20,8 +34,8 @@ export async function addNote(contactId: number, createdAt: Date, body = "Зам
   return row.id;
 }
 
-export async function addGroup(name: string) {
-  const [row] = await db.insert(groups).values({ name }).returning({ id: groups.id });
+export async function addGroup(ownerId: string, name: string) {
+  const [row] = await db.insert(groups).values({ ownerId, name }).returning({ id: groups.id });
   return row.id;
 }
 

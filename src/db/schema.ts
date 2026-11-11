@@ -9,21 +9,33 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { users } from "./auth-schema";
+
+export * from "./auth-schema";
 
 export const contactFrequency = pgEnum("contact_frequency", ["week", "month", "quarter", "year"]);
 
-export const contacts = pgTable("contacts", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  name: text("name").notNull(),
-  // Who the person is: role, occupation, relation.
-  about: text("about"),
-  howWeMet: text("how_we_met"),
-  phone: text("phone"),
-  email: text("email"),
-  // How often to keep in touch; null when not set.
-  contactFrequency: contactFrequency("contact_frequency"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+// No cascade from users: the app never deletes users, and losing data by accident is worse than an error.
+export const contacts = pgTable(
+  "contacts",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    // Whose contact it is. Notes and group links belong to a user through their contact.
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => users.id),
+    name: text("name").notNull(),
+    // Who the person is: role, occupation, relation.
+    about: text("about"),
+    howWeMet: text("how_we_met"),
+    phone: text("phone"),
+    email: text("email"),
+    // How often to keep in touch; null when not set.
+    contactFrequency: contactFrequency("contact_frequency"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("contacts_owner_id_idx").on(table.ownerId)],
+);
 
 export const notes = pgTable(
   "notes",
@@ -44,12 +56,19 @@ export const groups = pgTable(
   "groups",
   {
     id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => users.id),
     name: text("name").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    // Names are unique ignoring letter case and "е"/"ё", the same rule as the contact search.
-    uniqueIndex("groups_name_normalized_idx").on(sql`replace(lower(${table.name}), 'ё', 'е')`),
+    // Names are unique within one owner, ignoring letter case and "е"/"ё",
+    // the same rule as the contact search. Different users may have the same group name.
+    uniqueIndex("groups_owner_name_normalized_idx").on(
+      table.ownerId,
+      sql`replace(lower(${table.name}), 'ё', 'е')`,
+    ),
   ],
 );
 
@@ -68,6 +87,21 @@ export const contactGroups = pgTable(
     primaryKey({ columns: [table.contactId, table.groupId] }),
     index("contact_groups_group_id_idx").on(table.groupId),
   ],
+);
+
+// One row per login email sent. Counted to limit emails per address (see src/lib/auth.ts).
+export const loginEmailSends = pgTable(
+  "login_email_sends",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    // Normalized: trimmed and lowercase.
+    email: text("email").notNull(),
+    // The `identifier` in `verifications` of the link that this letter carried: when the next
+    // letter goes to the same address, this link is cancelled.
+    linkIdentifier: text("link_identifier").notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("login_email_sends_email_sent_at_idx").on(table.email, table.sentAt)],
 );
 
 export type Contact = typeof contacts.$inferSelect;
