@@ -15,7 +15,8 @@ const migrationDatabaseUrl = (() => {
 const BEFORE_LOGIN = "0004_default_groups";
 const OWNER_MIGRATION = "0005_owner_ids.sql";
 
-describe("owner migration", () => {
+// Every test recreates a database and migrates it, which can take several seconds on a slow Docker.
+describe("owner migration", { timeout: 60_000 }, () => {
   let client: postgres.Sql;
 
   async function rowCounts() {
@@ -41,7 +42,7 @@ describe("owner migration", () => {
     await applyMigrations(migrationDatabaseUrl, { upTo: BEFORE_LOGIN });
     client = postgres(migrationDatabaseUrl, { max: 1, onnotice: () => {} });
     await fillBeforeLogin();
-  });
+  }, 60_000);
 
   afterEach(async () => {
     await client.end();
