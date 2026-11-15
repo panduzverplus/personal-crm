@@ -59,7 +59,7 @@
 ## 9. Документация и выкатка
 
 - [x] 9.1 README: Mailpit (адрес страницы, как войти под любым адресом на компьютере), новые настройки, `pnpm db:migrate` с `OWNER_EMAIL`, как устроен вход (`src/lib/auth.ts`, `src/proxy.ts`, страницы входа), откат после выкатки входа только парой — restore бэкапа `deploy-*` и прошлый образ. Проверка: `pnpm format:check`; команды из README выполняются как написано.
-- [ ] 9.2 Сказать владельцу, что сделать до merge: аккаунт Resend, домен `mail.crm.chigabugadaga.ru` и записи DNS в reg.ru, API-ключ; строки `OWNER_EMAIL`, `BETTER_AUTH_URL=https://app.chigabugadaga.ru`, `BETTER_AUTH_SECRET` (команда генерации на сервере), `SMTP_URL` — в `~/personal-crm/.env` на сервере. Проверка: владелец подтвердил; домен в Resend в статусе «verified».
+- [x] 9.2 Сказать владельцу, что сделать до merge: аккаунт Resend, домен `mail.crm.chigabugadaga.ru` и записи DNS в reg.ru, API-ключ; строки `OWNER_EMAIL`, `BETTER_AUTH_URL=https://app.chigabugadaga.ru`, `BETTER_AUTH_SECRET` (команда генерации на сервере), `SMTP_URL` — в `~/personal-crm/.env` на сервере. Проверка: владелец подтвердил; домен в Resend в статусе «verified».
 
 ## 10. Общая проверка
 
