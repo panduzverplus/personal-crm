@@ -9,6 +9,7 @@ import { contactFormFrom } from "@/lib/contact-form";
 import { getContact, getContactGroups, parseContactId } from "@/lib/contacts";
 import { listGroups } from "@/lib/groups";
 import { parseListParams, pathWithListParams } from "@/lib/list-params";
+import { requireUser } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Изменить контакт",
@@ -39,10 +40,11 @@ async function EditContact({
     notFound();
   }
 
+  const user = await requireUser();
   const [contact, contactGroups, groups] = await Promise.all([
-    getContact(id),
-    getContactGroups(id),
-    listGroups(),
+    getContact(user.id, id),
+    getContactGroups(user.id, id),
+    listGroups(user.id),
   ]);
   if (!contact) {
     notFound();

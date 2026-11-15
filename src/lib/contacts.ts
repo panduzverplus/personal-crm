@@ -30,20 +30,22 @@ function nameMatchesQuery(query: string): SQL | undefined {
 // The outer contact is therefore written out in full.
 const outerContactId = sql.raw('"contacts"."id"');
 
-/** The contact is in the group. */
-function isInGroup(groupId: number): SQL {
+/** The contact is in the group, and the group is the user's own: a group id of another user matches nothing. */
+function isInGroup(userId: string, groupId: number): SQL {
   return sql`exists (
     select 1 from contact_groups cg
+    join groups g on g.id = cg.group_id
     where cg.contact_id = ${outerContactId}
       and cg.group_id = ${groupId}
+      and g.owner_id = ${userId}
   )`;
 }
 
 /**
- * Contacts whose name matches the query, only from the group when one is given.
- * `total` counts all contacts in the app, `groupTotal` those in the group (all of them without a group).
+ * Contacts of the user whose name matches the query, only from the group when one is given.
+ * `total` counts all contacts of the user, `groupTotal` those in the group (all of them without a group).
  */
-export async function searchContacts(query: string, groupId: number | null) {
+export async function searchContacts(userId: string, query: string, groupId: number | null) {
   // Contacts must always be read fresh from the database, never prerendered.
   await connection();
 
@@ -61,15 +63,25 @@ export async function searchContacts(query: string, groupId: number | null) {
           from contact_groups cg
           join groups g on g.id = cg.group_id
           where cg.contact_id = ${outerContactId}
+            and g.owner_id = ${userId}
         ), '{}')`,
       })
       .from(contacts)
-      .where(and(nameMatchesQuery(query), groupId === null ? undefined : isInGroup(groupId)))
+      .where(
+        and(
+          eq(contacts.ownerId, userId),
+          nameMatchesQuery(query),
+          groupId === null ? undefined : isInGroup(userId, groupId),
+        ),
+      )
       .orderBy(sql`${contacts.name} collate "ru-x-icu"`, contacts.id),
-    db.select({ total: count() }).from(contacts),
+    db.select({ total: count() }).from(contacts).where(eq(contacts.ownerId, userId)),
     groupId === null
       ? undefined
-      : db.select({ total: count() }).from(contactGroups).where(eq(contactGroups.groupId, groupId)),
+      : db
+          .select({ total: count() })
+          .from(contacts)
+          .where(and(eq(contacts.ownerId, userId), isInGroup(userId, groupId))),
   ]);
 
   return { items, total, groupTotal: groupTotal ? groupTotal[0].total : total };
@@ -78,11 +90,11 @@ export async function searchContacts(query: string, groupId: number | null) {
 export type ContactListItem = Awaited<ReturnType<typeof searchContacts>>["items"][number];
 
 /**
- * Contacts with a frequency whose due day has passed: the most overdue first,
+ * Contacts of the user with a frequency whose due day has passed: the most overdue first,
  * the same due day by name. The due day counts from the latest note, or from
  * when the contact was added if it has no notes. With a group, only its contacts.
  */
-export async function getOverdueContacts(groupId: number | null) {
+export async function getOverdueContacts(userId: string, groupId: number | null) {
   await connection();
 
   const rows = await db
@@ -97,7 +109,11 @@ export async function getOverdueContacts(groupId: number | null) {
     .from(contacts)
     .leftJoin(notes, eq(notes.contactId, contacts.id))
     .where(
-      and(isNotNull(contacts.contactFrequency), groupId === null ? undefined : isInGroup(groupId)),
+      and(
+        eq(contacts.ownerId, userId),
+        isNotNull(contacts.contactFrequency),
+        groupId === null ? undefined : isInGroup(userId, groupId),
+      ),
     )
     .groupBy(contacts.id);
 
@@ -119,27 +135,39 @@ export function parseContactId(rawId: string) {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-export async function getContact(id: number) {
+/** The user's own contact; a contact of another user is answered as a missing one (null). */
+export async function getContact(userId: string, id: number) {
   await connection();
 
-  const [contact] = await db.select().from(contacts).where(eq(contacts.id, id)).limit(1);
+  const [contact] = await db
+    .select()
+    .from(contacts)
+    .where(and(eq(contacts.id, id), eq(contacts.ownerId, userId)))
+    .limit(1);
   return contact ?? null;
 }
 
-/** Groups of one contact, in alphabetical order. */
-export async function getContactGroups(contactId: number) {
+/** Groups of one contact of the user, in alphabetical order. */
+export async function getContactGroups(userId: string, contactId: number) {
   await connection();
 
   return db
     .select({ id: groups.id, name: groups.name })
     .from(contactGroups)
     .innerJoin(groups, eq(groups.id, contactGroups.groupId))
-    .where(eq(contactGroups.contactId, contactId))
+    .innerJoin(contacts, eq(contacts.id, contactGroups.contactId))
+    .where(
+      and(
+        eq(contactGroups.contactId, contactId),
+        eq(contacts.ownerId, userId),
+        eq(groups.ownerId, userId),
+      ),
+    )
     .orderBy(sql`${groups.name} collate "ru-x-icu"`, groups.id);
 }
 
-export async function getContactWithNotes(id: number) {
-  const contact = await getContact(id);
+export async function getContactWithNotes(userId: string, id: number) {
+  const contact = await getContact(userId, id);
   if (!contact) {
     return null;
   }
@@ -150,7 +178,7 @@ export async function getContactWithNotes(id: number) {
       .from(notes)
       .where(eq(notes.contactId, id))
       .orderBy(desc(notes.createdAt), desc(notes.id)),
-    getContactGroups(id),
+    getContactGroups(userId, id),
   ]);
 
   return { contact, notes: contactNotes, groups: contactGroupList };
@@ -160,9 +188,16 @@ type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
  * Makes `groupIds` the whole set of the contact's groups. A group that no longer exists
- * (deleted in another tab) is skipped, so one stale checkbox does not lose the other changes.
+ * (deleted in another tab) or belongs to another user is skipped, so one stale checkbox
+ * does not lose the other changes, and the result does not tell that such a group exists.
+ * The caller has already checked that the contact is the user's own.
  */
-async function replaceContactGroups(tx: Transaction, contactId: number, groupIds: number[]) {
+async function replaceContactGroups(
+  tx: Transaction,
+  userId: string,
+  contactId: number,
+  groupIds: number[],
+) {
   await tx.delete(contactGroups).where(eq(contactGroups.contactId, contactId));
   if (groupIds.length === 0) {
     return;
@@ -170,50 +205,65 @@ async function replaceContactGroups(tx: Transaction, contactId: number, groupIds
   await tx.execute(
     sql`insert into ${contactGroups} (contact_id, group_id)
       select ${contactId}::int, ${groups.id} from ${groups}
-      where ${inArray(groups.id, groupIds)}`,
+      where ${inArray(groups.id, groupIds)} and ${groups.ownerId} = ${userId}`,
   );
 }
 
-/** Saves the contact together with its groups in one transaction; returns the new id. */
-export async function insertContact(values: NewContact, groupIds: number[]) {
+/** Saves the user's contact together with its groups in one transaction; returns the new id. */
+export async function insertContact(
+  userId: string,
+  values: Omit<NewContact, "ownerId">,
+  groupIds: number[],
+) {
   return db.transaction(async (tx) => {
-    const [row] = await tx.insert(contacts).values(values).returning({ id: contacts.id });
-    await replaceContactGroups(tx, row.id, groupIds);
+    const [row] = await tx
+      .insert(contacts)
+      .values({ ...values, ownerId: userId })
+      .returning({ id: contacts.id });
+    await replaceContactGroups(tx, userId, row.id, groupIds);
     return row.id;
   });
 }
 
-/** Saves the contact and replaces its groups in one transaction. Returns false when the contact does not exist. */
-export async function updateContactById(id: number, values: ContactInput, groupIds: number[]) {
+/**
+ * Saves the contact and replaces its groups in one transaction.
+ * Returns false when the user has no such contact (it does not exist or is someone else's).
+ */
+export async function updateContactById(
+  userId: string,
+  id: number,
+  values: ContactInput,
+  groupIds: number[],
+) {
   return db.transaction(async (tx) => {
     const rows = await tx
       .update(contacts)
       .set(values)
-      .where(eq(contacts.id, id))
+      .where(and(eq(contacts.id, id), eq(contacts.ownerId, userId)))
       .returning({ id: contacts.id });
     if (rows.length === 0) {
       return false;
     }
-    await replaceContactGroups(tx, id, groupIds);
+    await replaceContactGroups(tx, userId, id, groupIds);
     return true;
   });
 }
 
-/** Deletes the contact with all its notes; returns its name, or null when it does not exist. */
-export async function deleteContactById(id: number) {
+/** Deletes the contact with all its notes; returns its name, or null when the user has no such contact. */
+export async function deleteContactById(userId: string, id: number) {
   const [row] = await db
     .delete(contacts)
-    .where(eq(contacts.id, id))
+    .where(and(eq(contacts.id, id), eq(contacts.ownerId, userId)))
     .returning({ name: contacts.name });
   return row?.name ?? null;
 }
 
-/** Returns false when the contact does not exist. */
-export async function insertNote(contactId: number, body: string) {
+/** Returns false when the user has no such contact. */
+export async function insertNote(userId: string, contactId: number, body: string) {
   const [contact] = await db
     .select({ id: contacts.id })
     .from(contacts)
-    .where(eq(contacts.id, contactId))
+    .where(and(eq(contacts.id, contactId), eq(contacts.ownerId, userId)))
     .limit(1);
   if (!contact) {
     return false;
@@ -225,13 +275,15 @@ export async function insertNote(contactId: number, body: string) {
 
 /**
  * Saves new note text and stamps the edit time; an unchanged text keeps the old stamp.
- * Returns the note's contact id, or null when the note does not exist.
+ * Returns the note's contact id, or null when the user has no such note (a note belongs
+ * to the owner of its contact).
  */
-export async function updateNoteBody(noteId: number, body: string) {
+export async function updateNoteBody(userId: string, noteId: number, body: string) {
   const [note] = await db
     .select({ contactId: notes.contactId, body: notes.body })
     .from(notes)
-    .where(eq(notes.id, noteId))
+    .innerJoin(contacts, eq(contacts.id, notes.contactId))
+    .where(and(eq(notes.id, noteId), eq(contacts.ownerId, userId)))
     .limit(1);
   if (!note) {
     return null;

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { count } from "drizzle-orm";
 import { db } from "@/db";
 import { contacts } from "@/db/schema";
+import { addContact, addUser } from "./factories";
 import { assertTestDatabase, resetDatabase } from "./db";
 
 describe("test database", () => {
@@ -17,13 +18,12 @@ describe("test database", () => {
   });
 
   it("empties the tables and restarts ids", async () => {
-    await db.insert(contacts).values({ name: "Анна" });
+    const user = await addUser("anna@example.com");
+    await addContact(user, "Анна");
     await resetDatabase();
 
-    const [row] = await db
-      .insert(contacts)
-      .values({ name: "Борис" })
-      .returning({ id: contacts.id });
-    expect(row.id).toBe(1);
+    const second = await addUser("anna@example.com");
+    const id = await addContact(second, "Борис");
+    expect(id).toBe(1);
   });
 });

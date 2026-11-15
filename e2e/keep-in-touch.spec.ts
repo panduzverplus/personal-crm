@@ -1,8 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { seedContacts, type SeedContact } from "./database";
+import { signIn } from "./mailpit";
 
 // The main user paths of openspec/specs/keep-in-touch/spec.md.
 // Date arithmetic and note editing are covered by the unit tests.
+
+// Without a login the app does not open, so every scenario starts logged in.
+test.beforeEach(({ page }) => signIn(page));
 
 const DAY = 24 * 60 * 60 * 1000;
 const daysAgo = (days: number) => new Date(Date.now() - days * DAY);

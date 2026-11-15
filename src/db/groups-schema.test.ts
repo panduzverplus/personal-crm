@@ -1,29 +1,25 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { contactGroups, contacts, groups } from "@/db/schema";
 import { resetDatabase } from "@/test/db";
+import { addContact, addGroup, addUser } from "@/test/factories";
 
 // Drizzle wraps the driver error: the Postgres error code is on `cause`.
 const uniqueViolation = { cause: { code: "23505" } };
 
-async function addContact(name: string) {
-  const [row] = await db.insert(contacts).values({ name }).returning({ id: contacts.id });
-  return row.id;
-}
-
-async function addGroup(name: string) {
-  const [row] = await db.insert(groups).values({ name }).returning({ id: groups.id });
-  return row.id;
-}
+let user: string;
 
 describe("groups schema", () => {
-  beforeEach(resetDatabase);
+  beforeEach(async () => {
+    await resetDatabase();
+    user = await addUser("anna@example.com");
+  });
 
   it("deleting a contact removes only its group links", async () => {
-    const anna = await addContact("Анна");
-    const boris = await addContact("Борис");
-    const tennis = await addGroup("Теннис");
+    const anna = await addContact(user, "Анна");
+    const boris = await addContact(user, "Борис");
+    const tennis = await addGroup(user, "Теннис");
     await db.insert(contactGroups).values([
       { contactId: anna, groupId: tennis },
       { contactId: boris, groupId: tennis },
@@ -37,9 +33,9 @@ describe("groups schema", () => {
   });
 
   it("deleting a group keeps its contacts and their other groups", async () => {
-    const anna = await addContact("Анна");
-    const tennis = await addGroup("Теннис");
-    const family = await addGroup("Семья");
+    const anna = await addContact(user, "Анна");
+    const tennis = await addGroup(user, "Теннис");
+    const family = await addGroup(user, "Семья");
     await db.insert(contactGroups).values([
       { contactId: anna, groupId: tennis },
       { contactId: anna, groupId: family },
@@ -52,26 +48,44 @@ describe("groups schema", () => {
   });
 
   it("does not store a second group differing only by letter case", async () => {
-    await addGroup("Теннис");
+    await addGroup(user, "Теннис");
 
-    await expect(addGroup("теннис")).rejects.toMatchObject(uniqueViolation);
+    await expect(addGroup(user, "теннис")).rejects.toMatchObject(uniqueViolation);
     expect(await db.select().from(groups)).toHaveLength(1);
   });
 
   it("does not store a second group differing only by е and ё", async () => {
-    await addGroup("Алёна");
+    await addGroup(user, "Алёна");
 
-    await expect(addGroup("Алена")).rejects.toMatchObject(uniqueViolation);
+    await expect(addGroup(user, "Алена")).rejects.toMatchObject(uniqueViolation);
     expect(await db.select().from(groups)).toHaveLength(1);
   });
 
+  it("stores groups with the same name for different users", async () => {
+    const boris = await addUser("boris@example.com");
+    await addGroup(user, "Друзья");
+
+    await expect(addGroup(boris, "друзья")).resolves.toEqual(expect.any(Number));
+    expect(await db.select().from(groups)).toHaveLength(2);
+  });
+
   it("does not link a contact to the same group twice", async () => {
-    const anna = await addContact("Анна");
-    const tennis = await addGroup("Теннис");
+    const anna = await addContact(user, "Анна");
+    const tennis = await addGroup(user, "Теннис");
     await db.insert(contactGroups).values({ contactId: anna, groupId: tennis });
 
     await expect(
       db.insert(contactGroups).values({ contactId: anna, groupId: tennis }),
     ).rejects.toMatchObject(uniqueViolation);
+  });
+
+  it("does not store a contact or a group without an owner", async () => {
+    // Postgres code 23502 is not_null_violation.
+    await expect(
+      db.execute(sql`insert into contacts (name) values ('Анна')`),
+    ).rejects.toMatchObject({ cause: { code: "23502" } });
+    await expect(
+      db.execute(sql`insert into groups (name) values ('Теннис')`),
+    ).rejects.toMatchObject({ cause: { code: "23502" } });
   });
 });

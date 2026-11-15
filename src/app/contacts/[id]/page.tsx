@@ -15,6 +15,7 @@ import { getContactWithNotes, parseContactId } from "@/lib/contacts";
 import { formatDate, formatDateTime, pluralize } from "@/lib/format";
 import { keepInTouchStatus } from "@/lib/keep-in-touch";
 import { isListNarrowed, parseListParams, pathWithListParams } from "@/lib/list-params";
+import { requireUser } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -44,7 +45,8 @@ async function ContactCard({
     notFound();
   }
 
-  const data = await getContactWithNotes(id);
+  const user = await requireUser();
+  const data = await getContactWithNotes(user.id, id);
   if (!data) {
     notFound();
   }

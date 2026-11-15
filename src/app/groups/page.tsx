@@ -5,6 +5,7 @@ import { BackLink } from "@/components/back-link";
 import { CreateGroupForm } from "@/components/create-group-form";
 import { GroupRow } from "@/components/group-row";
 import { listGroupsWithCounts } from "@/lib/groups";
+import { requireUser } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Группы",
@@ -23,7 +24,8 @@ export default function GroupsPage() {
 }
 
 async function Groups() {
-  const groups = await listGroupsWithCounts();
+  const user = await requireUser();
+  const groups = await listGroupsWithCounts(user.id);
 
   return (
     <div className="flex flex-col gap-6">

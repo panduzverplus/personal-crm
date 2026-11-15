@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geologica, IBM_Plex_Mono, Onest, Unbounded } from "next/font/google";
 import Link from "next/link";
+import { Suspense } from "react";
+import { HeaderAccount } from "@/components/header-account";
 import "./globals.css";
 
 // The same fonts as on the landing
@@ -49,7 +51,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               {/* Red "Ч" as the big letter on the landing */}
               <span className="text-brand">Ч</span>игабугадага
             </Link>
-            <span className="font-mono text-label">ЛИЧНЫЕ КОНТАКТЫ</span>
+            {/* Reads the session, which is per request: it waits in its own boundary, the label shows meanwhile. */}
+            <Suspense fallback={<span className="font-mono text-label">ЛИЧНЫЕ КОНТАКТЫ</span>}>
+              <HeaderAccount />
+            </Suspense>
           </div>
         </header>
         <main className="mx-auto w-full max-w-3xl flex-1 px-5.5 pt-8 pb-14 md:px-8 md:pt-12 md:pb-20">
