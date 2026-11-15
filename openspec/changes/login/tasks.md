@@ -15,7 +15,7 @@
 - [x] 2.3 Сгенерировать описания таблиц Better Auth (`pnpm dlx @better-auth/cli generate`, `usePlural`) в `src/db/auth-schema.ts`, добавить `login_email_sends`, `owner_id` в `contacts` и `groups`, индексы из design (решение 8) в `src/db/schema.ts`. Проверка: `pnpm typecheck`.
 - [x] 2.4 `pnpm db:generate`, затем вручную дописать в SQL шаги из design (решение 9): `owner_id` сначала без `not null`, блок `DO` с `current_setting('app.owner_email', true)`, потом `not null`, внешние ключи, новый индекс названий групп. Проверка: тесты 2.2 зелёные, снимок `drizzle/meta` соответствует схеме (`pnpm db:generate` больше ничего не создаёт).
 - [x] 2.5 `src/db/migrate.ts` передаёт `OWNER_EMAIL` через `set_config` на том же подключении; `pnpm db:migrate` переведён на `tsx src/db/migrate.ts`; `src/test/migrated-database.ts` и `e2e/prepare-database.ts` передают тестовую почту владельца. Проверка: `pnpm test` зелёный; на копии своей локальной базы `pnpm db:migrate` проходит, числа контактов, заметок и групп до и после совпадают.
-- [ ] 2.6 Показать владельцу SQL миграции, меняющей данные, и результат проверки 2.5 до merge (правило `CLAUDE.md`). Проверка: владелец посмотрел.
+- [x] 2.6 Показать владельцу SQL миграции, меняющей данные, и результат проверки 2.5 до merge (правило `CLAUDE.md`). Проверка: владелец посмотрел.
 
 ## 3. Данные только своего пользователя
 
