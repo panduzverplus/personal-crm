@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { isAPIError } from "better-auth/api";
 import { auth, LOGIN_ERROR } from "@/lib/auth";
+import { logError } from "@/lib/log-error";
 import type { LoginFormState } from "@/lib/login-form";
 import { parseLoginEmail } from "@/lib/login-email";
 
@@ -39,7 +40,7 @@ export async function requestLoginLink(
     }
     if (isAPIError(error) && error.body?.code !== LOGIN_ERROR.sendFailed) {
       // Not one of ours (for example the library refused the request): worth a line in the log.
-      console.error("Login link request was refused", error);
+      logError("Login link request was refused", error);
     }
     return { status: "failed", email: typed };
   }

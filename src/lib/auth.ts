@@ -8,6 +8,7 @@ import { magicLink } from "better-auth/plugins";
 import { and, count, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { loginEmailSends, verifications } from "@/db/schema";
+import { logError } from "@/lib/log-error";
 import { LOGIN_LINK_MINUTES, parseLoginEmail } from "@/lib/login-email";
 import { sendLoginEmail } from "@/lib/mail";
 import { SESSION_EXPIRES_IN, SESSION_UPDATE_AGE } from "@/lib/session-config";
@@ -94,7 +95,7 @@ async function sendLoginLink({ email, url, token }: { email: string; url: string
       return false;
     });
   } catch (error) {
-    console.error("Failed to send the login email", error);
+    logError("Failed to send the login email", error);
     await deleteLink(identifier);
     throw new APIError("INTERNAL_SERVER_ERROR", {
       message: "Could not send the login email",
