@@ -1,39 +1,59 @@
 #!/usr/bin/env bash
-# Runs on the server: get the image, back up the database, apply migrations, start the new image,
-# smoke-check /health.
-# Usage: deploy.sh <image> [--pull]
+# Runs on the server: get the image, (prod only) back up the database, apply migrations, start the new
+# image, smoke-check /health. One script for both environments, the environment is the first argument.
+# Usage: deploy.sh <prod|staging> <image> [--pull]
 #   --pull  read a GHCR token from stdin and pull the image (used by CI)
-#   without --pull the image must already be on the server, e.g. a manual rollback:
-#   bash ~/personal-crm/deploy.sh "$(cat ~/personal-crm/previous-image)"
-# The backup (backup.sh deploy) is named after the version that was running before this deploy:
-#   backups/deploy-<UTC time>-<short SHA>.dump; only the newest KEEP_BACKUPS of them are kept.
+#   without --pull the image must already be on the server, e.g. a manual rollback of prod:
+#   bash ~/personal-crm/deploy.sh prod "$(cat ~/personal-crm/previous-image)"
+# prod:    backup (backup.sh deploy) -> migrations -> new image -> smoke -> clean old images.
+#          The backup is named after the version that was running before this deploy:
+#          backups/deploy-<UTC time>-<short SHA>.dump; only the newest KEEP_BACKUPS of them are kept.
+# staging: migrations -> new image -> smoke. No backup (the stand's database is a copy that can be made
+#          again, see refresh-staging-db.sh) and no image cleanup (prod's deploy does it).
+# Two deploys of one environment never run at once: the second waits for the first.
 # There is no automatic rollback: any failed step stops the script with a non-zero exit code.
 set -euo pipefail
 
-IMAGE="${1:?usage: deploy.sh <image> [--pull]}"
-PULL="${2:-}"
+export DEPLOY_ENV="${1:?usage: deploy.sh <prod|staging> <image> [--pull]}"
+IMAGE="${2:?usage: deploy.sh <prod|staging> <image> [--pull]}"
+PULL="${3:-}"
 REPOSITORY="${IMAGE%:*}"
-KEEP_BACKUPS=10
+KEEP_BACKUPS=7
+KEEP_IMAGE_DAYS=14
+LOCK_WAIT_SECONDS=1800
 cd "$(dirname "$0")"
 # shellcheck source=lib.sh
 source ./lib.sh
 
-[ -f .env ] || { echo "ERROR: $PWD/.env is missing" >&2; exit 1; }
-chmod 600 .env
+# One deploy per environment at a time. The lock is released when the script exits.
+exec 9>"deploy-$DEPLOY_ENV.lock"
+if ! flock -n 9; then
+  echo "Another $DEPLOY_ENV deploy is running, waiting for it (up to $((LOCK_WAIT_SECONDS / 60)) minutes)"
+  flock -w "$LOCK_WAIT_SECONDS" 9 || { echo "ERROR: the other $DEPLOY_ENV deploy did not finish in time" >&2; exit 1; }
+fi
 
-step "Image $IMAGE"
+[ -f "$ENV_FILE" ] || { echo "ERROR: $PWD/$ENV_FILE is missing" >&2; exit 1; }
+chmod 600 "$ENV_FILE"
+
+step "Deploy to $DEPLOY_ENV: image $IMAGE"
 if [ "$PULL" = "--pull" ]; then
-  trap 'docker logout ghcr.io >/dev/null' EXIT
-  docker login ghcr.io -u "${GHCR_USER:?GHCR_USER is not set}" --password-stdin
-  docker pull "$IMAGE"
+  # A docker config of its own: the prod and the staging deploys run side by side, and a shared login
+  # that one of them removes at its end would break the pull of the other.
+  docker_config="$(mktemp -d)"
+  trap 'rm -rf "$docker_config"' EXIT
+  DOCKER_CONFIG="$docker_config" docker login ghcr.io -u "${GHCR_USER:?GHCR_USER is not set}" --password-stdin
+  DOCKER_CONFIG="$docker_config" docker pull "$IMAGE"
+  rm -rf "$docker_config"
 elif ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   echo "ERROR: $IMAGE is not on the server; run with --pull" >&2
   exit 1
 fi
 
-# Before migrations: if they damage data, this file holds the database as the running version left it.
-# A failed backup stops the deploy. IMAGE is passed for the very first deploy, when current-image is missing.
-IMAGE="$IMAGE" bash ./backup.sh deploy >/dev/null
+if [ "$DEPLOY_ENV" = prod ]; then
+  # Before migrations: if they damage data, this file holds the database as the running version left it.
+  # A failed backup stops the deploy. IMAGE is passed for the very first deploy, when current-image is missing.
+  IMAGE="$IMAGE" bash ./backup.sh deploy >/dev/null
+fi
 
 step "Migrations"
 # Runs in a one-off container from the new image; on failure the app keeps running the old image.
@@ -45,24 +65,39 @@ compose up -d --wait --wait-timeout 120 crm-app
 step "Smoke check $HEALTH_URL"
 smoke_check
 
-step "Keep only the current and the previous image"
-current="$(cat current-image 2>/dev/null || true)"
+step "Remember the version"
+current="$(cat "$CURRENT_IMAGE_FILE" 2>/dev/null || true)"
 if [ "$current" != "$IMAGE" ]; then
-  [ -n "$current" ] && echo "$current" > previous-image
-  echo "$IMAGE" > current-image
+  # prod keeps the version before this one for a manual rollback.
+  [ -n "$current" ] && [ -n "$PREVIOUS_IMAGE_FILE" ] && echo "$current" > "$PREVIOUS_IMAGE_FILE"
+  echo "$IMAGE" > "$CURRENT_IMAGE_FILE"
 fi
-previous="$(cat previous-image 2>/dev/null || true)"
-docker image ls "$REPOSITORY" --format '{{.Repository}}:{{.Tag}}' \
-  | { grep -vxF -e "$IMAGE" -e "${previous:-$IMAGE}" || true; } \
-  | xargs -r docker image rm
+previous=""
+[ -n "$PREVIOUS_IMAGE_FILE" ] && previous="$(cat "$PREVIOUS_IMAGE_FILE" 2>/dev/null || true)"
 echo "current:  $IMAGE"
 echo "previous: ${previous:-none}"
 
-step "Keep only the newest $KEEP_BACKUPS deploy backups"
-# Names start with the UTC time, so sorting by name is sorting by age.
-# Manual backups (manual-*.dump) and copies made by restore.sh (before-restore-*.dump) are never deleted here.
-find "$BACKUP_DIR" -maxdepth 1 -name 'deploy-*.dump' | sort -r | tail -n +$((KEEP_BACKUPS + 1)) | xargs -r rm -f --
-ls -1 "$BACKUP_DIR"
+if [ "$DEPLOY_ENV" = prod ]; then
+  step "Remove images older than $KEEP_IMAGE_DAYS days"
+  # Kept whatever their age: the two last versions of prod and the version on the stand.
+  # Young images are never touched, so a stand deploy that is pulling a new image right now is safe.
+  staging_image="$(cat staging-current-image 2>/dev/null || true)"
+  cutoff="$(date -d "$KEEP_IMAGE_DAYS days ago" +%s)"
+  docker image ls "$REPOSITORY" --format '{{.Repository}}:{{.Tag}}' \
+    | { grep -vxF -e "$IMAGE" -e "${previous:-$IMAGE}" -e "${staging_image:-$IMAGE}" || true; } \
+    | while read -r old; do
+      created="$(docker image inspect -f '{{.Created}}' "$old")"
+      if [ "$(date -d "$created" +%s)" -lt "$cutoff" ]; then
+        docker image rm "$old"
+      fi
+    done
+
+  step "Keep only the newest $KEEP_BACKUPS deploy backups"
+  # Names start with the UTC time, so sorting by name is sorting by age.
+  # Manual backups (manual-*.dump) and copies made by restore.sh (before-restore-*.dump) are never deleted here.
+  find "$BACKUP_DIR" -maxdepth 1 -name 'deploy-*.dump' | sort -r | tail -n +$((KEEP_BACKUPS + 1)) | xargs -r rm -f --
+  ls -1 "$BACKUP_DIR"
+fi
 
 echo
-echo "DEPLOYED $IMAGE"
+echo "DEPLOYED $DEPLOY_ENV $IMAGE"

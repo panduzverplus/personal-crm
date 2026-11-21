@@ -116,6 +116,10 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: "pg", usePlural: true }),
+  // The login cookie belongs to the one host that set it (app. or test-app.), with no Domain attribute:
+  // prod and the test stand never see each other's cookies. The address in the login letter is
+  // BETTER_AUTH_URL of the environment that sent it.
+  advanced: { crossSubDomainCookies: { enabled: false } },
   session: {
     // 30 days from the last visit on this device; a visit moves the end, at most once a day.
     // The cookie in the browser is renewed by src/proxy.ts: a Server Component cannot set cookies.
