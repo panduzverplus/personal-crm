@@ -238,7 +238,7 @@ ssh crm 'bash ~/personal-crm/deploy.sh prod "$(cat ~/personal-crm/previous-image
 | Что сделать                                  | Команда                                                                                        |
 | -------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | посмотреть, какой образ сейчас на сервере    | `ssh crm 'cat ~/personal-crm/current-image'` (прод), `staging-current-image` (стенд)           |
-| посмотреть логи приложения                   | `ssh crm 'docker logs --tail 100 prod-crm-app-1'` (прод), `staging-crm-app-1` (стенд)          |
+| посмотреть логи приложения                   | `ssh crm 'docker logs --tail 100 prod-crm-app-1'` (прод), `staging-crm-app-1` (стенд); историю — см. «Логи» ниже |
 | заполнить пустую базу 1000 тестовыми контактами | `ssh crm 'cd ~/personal-crm && APP_IMAGE=$(cat current-image) docker compose -p prod run --rm crm-seed'` |
 | посмотреть бэкапы базы                       | `ssh crm 'ls -lh ~/personal-crm/backups'`                                                      |
 | снять бэкап базы вручную                     | `ssh crm 'bash ~/personal-crm/backup.sh'`                                                 |
@@ -304,6 +304,23 @@ ssh -t crm 'bash ~/server-setup/create-staging-env.sh'                          
 
 Ключ Resend для стенда — отдельный: Resend → API Keys → Create API Key. Потом merge в main: первая выкатка поднимет
 стенд с пустой базой, затем `refresh-staging-db.sh` (выше) кладёт в неё копию прода.
+
+## Логи
+
+Логи всех контейнеров (приложение и база, прод и стенд) идут в журнал сервера (journald). Они не удаляются вместе
+с контейнером, поэтому переживают выкатку и откат. Размер журнала ограничивает сама система: старые строки удаляются,
+диск не забивается. Метка строк в журнале — имя контейнера: `prod-crm-app-1`, `prod-crm-db-1`,
+`staging-crm-app-1`, `staging-crm-db-1`.
+
+```bash
+ssh crm 'docker logs --tail 100 prod-crm-app-1'                     # что сейчас: последние 100 строк работающего контейнера
+ssh crm 'journalctl -t prod-crm-app-1 -n 200 --no-pager'            # история, в том числе уже заменённых контейнеров
+ssh crm 'journalctl -t prod-crm-app-1 --since "1 hour ago" --no-pager'   # за последний час
+ssh crm 'journalctl -t staging-crm-app-1 -n 200 --no-pager'         # стенд; для базы — prod-crm-db-1
+```
+
+`journalctl` работает, если пользователь `crmapp` в группе `systemd-journal`
+(один раз: `ssh -t crm "sudo usermod -aG systemd-journal crmapp"`).
 
 ## Бэкапы и восстановление
 
@@ -396,7 +413,8 @@ ssh -t crm 'bash ~/personal-crm/restore.sh ~/personal-crm/backups/deploy-2026111
 - Один сертификат Let's Encrypt на лендинг и приложение, отдельный — на стенд; оба продлеваются сами (таймер `certbot.timer`);
   http перенаправляется на https
 - Docker открывает порты контейнеров только на `127.0.0.1`: наружу всё идёт через nginx.
-  Логи контейнеров ограничены: до 3 файлов по 10 МБ
+  Логи контейнеров идут в журнал сервера (см. «Логи» ниже); лимит Docker «3 файла по 10 МБ» остаётся только запасным
+  для контейнеров, у которых драйвер логов не задан
 - Docker сам не обновляется: обновлять вручную через `sudo apt upgrade`
 - Пользователь `crmapp` в группе `docker`, чтобы выкатка работала без sudo
 

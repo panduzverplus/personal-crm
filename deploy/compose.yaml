@@ -9,6 +9,13 @@ x-app: &app
   image: ${APP_IMAGE:?APP_IMAGE is not set}
   env_file: ${ENV_FILE:-.env}
   mem_limit: ${APP_MEM_LIMIT:-0}
+  logging: &logging
+    # Logs go to the server journal (journald): they outlive the container, so a deploy or a rollback
+    # does not delete them. The journal size is limited by the system. The tag is the container name:
+    # journalctl -t prod-crm-app-1
+    driver: journald
+    options:
+      tag: "{{.Name}}"
   environment:
     POSTGRES_HOST: crm-db
   depends_on:
@@ -21,6 +28,7 @@ services:
     restart: unless-stopped
     env_file: ${ENV_FILE:-.env}
     mem_limit: ${DB_MEM_LIMIT:-0}
+    logging: *logging
     volumes:
       - crm-db-data:/var/lib/postgresql/data
     healthcheck:
