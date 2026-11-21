@@ -29,6 +29,7 @@ import {
 } from "@/lib/group-form";
 import { deleteGroupById, insertGroup, renameGroupById } from "@/lib/groups";
 import { parseListParams, pathWithListParams, type ListParams } from "@/lib/list-params";
+import { logError } from "@/lib/log-error";
 import { requireUser } from "@/lib/session";
 
 function readContactForm(formData: FormData) {
@@ -70,7 +71,7 @@ export async function createContact(
   try {
     id = await insertContact(user.id, form.data, form.groupIds);
   } catch (error) {
-    console.error("Failed to create contact", error);
+    logError("Failed to create contact", error);
     return {
       values: form.values,
       groupIds: form.groupIds,
@@ -112,7 +113,7 @@ export async function updateContact(
     try {
       updated = await updateContactById(user.id, contactId, form.data, form.groupIds);
     } catch (error) {
-      console.error("Failed to update contact", error);
+      logError("Failed to update contact", error);
       return {
         values: form.values,
         groupIds: form.groupIds,
@@ -150,7 +151,7 @@ export async function deleteContact(
     try {
       name = await deleteContactById(user.id, contactId);
     } catch (error) {
-      console.error("Failed to delete contact", error);
+      logError("Failed to delete contact", error);
       return { error: "Не удалось удалить контакт. Попробуйте ещё раз." };
     }
   }
@@ -186,7 +187,7 @@ export async function addNote(
       return { status: "error", body, error: "Контакт не найден" };
     }
   } catch (error) {
-    console.error("Failed to add note", error);
+    logError("Failed to add note", error);
     return {
       status: "error",
       body,
@@ -218,7 +219,7 @@ export async function updateNote(
     try {
       contactId = await updateNoteBody(user.id, noteId, parsed.data);
     } catch (error) {
-      console.error("Failed to update note", error);
+      logError("Failed to update note", error);
       return {
         status: "error",
         body,
@@ -256,7 +257,7 @@ export async function createGroup(
   try {
     result = await insertGroup(user.id, parsed.name);
   } catch (error) {
-    console.error("Failed to create group", error);
+    logError("Failed to create group", error);
     return {
       status: "error",
       name,
@@ -291,7 +292,7 @@ export async function renameGroup(
     try {
       result = await renameGroupById(user.id, groupId, parsed.name);
     } catch (error) {
-      console.error("Failed to rename group", error);
+      logError("Failed to rename group", error);
       return {
         status: "error",
         name,
@@ -316,7 +317,7 @@ export async function deleteGroup(groupId: number): Promise<DeleteGroupState> {
     try {
       await deleteGroupById(user.id, groupId);
     } catch (error) {
-      console.error("Failed to delete group", error);
+      logError("Failed to delete group", error);
       return { error: "Не удалось удалить группу. Попробуйте ещё раз." };
     }
   }
