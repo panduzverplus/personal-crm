@@ -1,4 +1,5 @@
 import { CircleCheckIcon } from "lucide-react";
+import { Birthdays } from "@/components/birthdays";
 import { ContactList } from "@/components/contact-list";
 import { ContactSearch } from "@/components/contact-search";
 import { GroupFilter } from "@/components/group-filter";
@@ -10,8 +11,8 @@ import { listQueryString, parseListParams } from "@/lib/list-params";
 import { requireUser } from "@/lib/session";
 
 /**
- * Everything under the page title: group buttons, "Пора связаться", search and the list.
- * The selected group is worked out once here, so the block and the list always agree on it.
+ * Everything under the page title: group buttons, "Скоро день рождения", "Пора связаться", search and the list.
+ * The selected group is worked out once here, so the blocks and the list always agree on it.
  */
 export async function HomeContent({
   searchParams,
@@ -24,6 +25,8 @@ export async function HomeContent({
   const groups = await listGroups(user.id);
   // A group in the address that does not exist or is someone else's counts as "Все".
   const group = groups.find((item) => item.id === groupId) ?? null;
+  // The group and search added to the card links of both blocks, so the card can lead back.
+  const listQuery = listQueryString({ group: group?.id ?? null, q });
 
   return (
     <ListControlsProvider group={group?.id ?? null} query={q}>
@@ -35,11 +38,9 @@ export async function HomeContent({
         </Alert>
       )}
       <GroupFilter groups={groups} activeGroup={group?.id ?? null} query={q} />
-      <KeepInTouch
-        userId={user.id}
-        groupId={group?.id ?? null}
-        listQuery={listQueryString({ group: group?.id ?? null, q })}
-      />
+      {/* Birthdays are tied to a date, so they go above the overdue contacts. */}
+      <Birthdays userId={user.id} groupId={group?.id ?? null} listQuery={listQuery} />
+      <KeepInTouch userId={user.id} groupId={group?.id ?? null} listQuery={listQuery} />
       <ContactSearch query={q} />
       <ContactList userId={user.id} searchParams={searchParams} query={q} group={group} />
     </ListControlsProvider>

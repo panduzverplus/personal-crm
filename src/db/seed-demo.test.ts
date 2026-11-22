@@ -4,7 +4,9 @@ import { db } from "@/db";
 import { contacts, notes, users } from "@/db/schema";
 import { resetDatabase } from "@/test/db";
 import { addContact, addUser } from "@/test/factories";
-import { createRandom } from "./seed-data";
+import { formatBirthdayInput, parseBirthday } from "@/lib/birthday";
+import { getUpcomingBirthdays } from "@/lib/contacts";
+import { createRandom, generateContacts } from "./seed-data";
 import { seedDemoData } from "./seed-demo";
 
 const options = { total: 30, random: createRandom(1), now: new Date(2026, 9, 12) };
@@ -77,5 +79,58 @@ describe("seedDemoData", () => {
 
     expect(await db.select().from(users)).toEqual([]);
     expect(await db.select().from(contacts)).toEqual([]);
+  });
+});
+
+describe("demo birthdays", () => {
+  beforeEach(resetDatabase);
+
+  // The same day as the options use: "now" is fixed, so the data do not depend on the clock.
+  const now = new Date(2026, 9, 12);
+  const birthdays = () => generateContacts(200, createRandom(7), now).map((c) => c.birthday);
+
+  it("gives a birthday to some contacts and none to others", () => {
+    const given = birthdays().filter((birthday) => birthday !== null);
+
+    expect(given.length).toBeGreaterThan(50);
+    expect(given.length).toBeLessThan(200);
+  });
+
+  it("knows the year of some birthdays and not of others", () => {
+    const given = birthdays().filter((birthday) => birthday !== null);
+
+    expect(given.some((birthday) => birthday.year !== null)).toBe(true);
+    expect(given.some((birthday) => birthday.year === null)).toBe(true);
+  });
+
+  it("only makes dates that the form accepts", () => {
+    for (const birthday of birthdays()) {
+      if (!birthday) continue;
+      const text = formatBirthdayInput(birthday);
+      expect(parseBirthday(text)).toEqual({ ok: true, birthday });
+    }
+  });
+
+  it("gives the same birthdays for the same seed", () => {
+    expect(birthdays()).toEqual(birthdays());
+  });
+
+  it("puts three birthdays at today, in 3 days and in 6 days, so the block is never empty", async () => {
+    await seedDemoData(db, "owner@example.com", { total: 30, random: createRandom(1), now });
+    const [owner] = await db.select().from(users).where(eq(users.email, "owner@example.com"));
+
+    const soon = await getUpcomingBirthdays(owner.id, null, now);
+
+    const days = soon.map((contact) => contact.daysAhead);
+    expect(days).toEqual(expect.arrayContaining([0, 3, 6]));
+  });
+
+  it("saves the birthdays of the generated contacts", async () => {
+    await seedDemoData(db, "owner@example.com", { total: 30, random: createRandom(1), now });
+
+    const rows = await db.select().from(contacts);
+
+    expect(rows.some((row) => row.birthDay !== null && row.birthMonth !== null)).toBe(true);
+    expect(rows.some((row) => row.birthDay === null && row.birthMonth === null)).toBe(true);
   });
 });

@@ -1,5 +1,8 @@
 // Source lists and generators for realistic-looking test contacts (Russian locale).
 
+// Relative import, and only a type: src/db/seed.ts runs under tsx, which does not know the "@/" alias.
+import type { Birthday } from "../lib/birthday";
+
 type Gender = "m" | "f";
 type Gendered = { m: string; f: string };
 
@@ -767,6 +770,7 @@ export type GeneratedContact = {
   phone: string | null;
   email: string | null;
   createdAt: Date;
+  birthday: Birthday | null;
   notes: { body: string; createdAt: Date }[];
 };
 
@@ -779,6 +783,25 @@ function atDaytime(random: Random, date: Date, earliest: Date, latest: Date): Da
   if (result < earliest) return new Date(earliest);
   if (result > latest) return new Date(latest);
   return result;
+}
+
+/** Days in each month; February has 28, so that a birthday is valid in any year. */
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/** A random birthday; the year is known for most of them and is the year of an adult. */
+function randomBirthday(random: Random, now: Date): Birthday {
+  const month = randomInt(random, 1, 12);
+  const day = randomInt(random, 1, DAYS_IN_MONTH[month - 1]);
+  const year = chance(random, 0.7) ? randomInt(random, 1950, now.getFullYear() - 18) : null;
+  return { day, month, year };
+}
+
+/** Today's birthday or the birthday `daysAhead` days from now. */
+function birthdayIn(daysAhead: number, year: number | null, now: Date): Birthday {
+  const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysAhead);
+  // 1990 and 1985 were not leap years: on February 29 the year is left out, as the form requires.
+  const isFebruary29 = date.getMonth() === 1 && date.getDate() === 29;
+  return { day: date.getDate(), month: date.getMonth() + 1, year: isFebruary29 ? null : year };
 }
 
 export function generateContacts(total: number, random: Random, now: Date): GeneratedContact[] {
@@ -814,12 +837,24 @@ export function generateContacts(total: number, random: Random, now: Date): Gene
       phone: chance(random, 0.9) ? phone(random) : null,
       email: chance(random, 0.75) ? email(random, firstName, lastName) : null,
       createdAt,
+      birthday: chance(random, 0.6) ? randomBirthday(random, now) : null,
       notes: noteDates.map((date) => ({
         body: noteBody(random, gender),
         createdAt: date,
       })),
     });
   }
+
+  // The first contacts have a birthday today, in 3 and in 6 days: the block "Скоро день рождения"
+  // is never empty on the demo data.
+  const soonBirthdays = [
+    birthdayIn(0, 1990, now),
+    birthdayIn(3, null, now),
+    birthdayIn(6, 1985, now),
+  ];
+  soonBirthdays.forEach((birthday, index) => {
+    if (result[index]) result[index].birthday = birthday;
+  });
 
   return result;
 }

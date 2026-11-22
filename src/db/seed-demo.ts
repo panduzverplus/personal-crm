@@ -51,7 +51,7 @@ export async function seedDemoData(
       const inserted = await tx
         .insert(contacts)
         .values(
-          batch.map(({ name, about, howWeMet, phone, email, createdAt }) => ({
+          batch.map(({ name, about, howWeMet, phone, email, createdAt, birthday }) => ({
             ownerId: owner.id,
             name,
             about,
@@ -59,6 +59,9 @@ export async function seedDemoData(
             phone,
             email,
             createdAt,
+            birthDay: birthday?.day ?? null,
+            birthMonth: birthday?.month ?? null,
+            birthYear: birthday?.year ?? null,
           })),
         )
         .returning({ id: contacts.id, name: contacts.name });

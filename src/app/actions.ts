@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import {
   contactFields,
   contactSchema,
@@ -44,11 +43,12 @@ function readContactForm(formData: FormData) {
     return { values, groupIds, data: parsed.data, errors: null };
   }
 
-  const fieldErrors = z.flattenError(parsed.error).fieldErrors;
+  // The first message of each field. The schema's result has other keys than the form's
+  // fields (the birthday becomes three columns), so the issues are read by their path.
   const errors: ContactFormState["errors"] = {};
-  for (const field of contactFields) {
-    const message = fieldErrors[field]?.[0];
-    if (message) errors[field] = message;
+  for (const issue of parsed.error.issues) {
+    const field = contactFields.find((name) => name === issue.path[0]);
+    if (field && !errors[field]) errors[field] = issue.message;
   }
   return { values, groupIds, data: null, errors };
 }

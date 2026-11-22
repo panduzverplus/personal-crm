@@ -11,14 +11,23 @@ const VISIBLE_ROWS = 5;
 
 const CONTACT_FORMS: [string, string, string] = ["контакт", "контакта", "контактов"];
 
-export type KeepInTouchRow = { id: number; name: string; details: string };
+export type ContactBlockRow = { id: number; name: string; details: string };
 
-/** Shows the first five overdue contacts; the rest open with "Показать всех". */
-export function KeepInTouchList({
+/**
+ * A block of the home page: a heading with the number of contacts and their rows.
+ * Shows the first five; the rest open with "Показать всех".
+ * Used by "Пора связаться" and "Скоро день рождения".
+ */
+export function ContactBlock({
+  title,
+  headingId,
   rows,
   listQuery,
 }: {
-  rows: KeepInTouchRow[];
+  title: string;
+  /** Id of the heading, unique on the page: the block is a region named by it. */
+  headingId: string;
+  rows: ContactBlockRow[];
   /** The group and search of the list ("" for the full list), so the card can lead back to it. */
   listQuery: string;
 }) {
@@ -39,13 +48,13 @@ export function KeepInTouchList({
   return (
     <section
       ref={sectionRef}
-      aria-labelledby="keep-in-touch-heading"
+      aria-labelledby={headingId}
       className="flex scroll-mt-4 flex-col gap-3"
     >
       {/* Section heading with a line on top, as on the landing */}
       <div className="flex items-baseline justify-between gap-4 border-t pt-3.5 md:pt-4">
-        <h2 id="keep-in-touch-heading" className="text-h2 font-light">
-          Пора связаться
+        <h2 id={headingId} className="text-h2 font-light">
+          {title}
         </h2>
         <span className="font-mono text-meta text-muted-foreground uppercase">
           {pluralize(rows.length, CONTACT_FORMS)}

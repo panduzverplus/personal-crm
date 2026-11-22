@@ -10,6 +10,7 @@ import {
   getContactGroups,
   getContactWithNotes,
   getOverdueContacts,
+  getUpcomingBirthdays,
   insertContact,
   insertNote,
   searchContacts,
@@ -21,7 +22,16 @@ import {
 // that he would get for a record that does not exist, and A's data must not change.
 
 const DAY = 24 * 60 * 60 * 1000;
-const noFields = { about: null, email: null, phone: null, howWeMet: null, contactFrequency: null };
+const noFields = {
+  about: null,
+  email: null,
+  phone: null,
+  howWeMet: null,
+  contactFrequency: null,
+  birthDay: null,
+  birthMonth: null,
+  birthYear: null,
+};
 
 let a: string;
 let b: string;
@@ -138,6 +148,18 @@ describe("a user sees only own contacts", () => {
     expect(await getOverdueContacts(b, tennisId)).toEqual([]);
   });
 
+  it("does not return soon birthdays of another user", async () => {
+    const today = new Date(2026, 10, 22);
+    await db.update(contacts).set({ birthDay: 23, birthMonth: 11 }).where(eq(contacts.id, annaId));
+
+    expect((await getUpcomingBirthdays(a, null, today)).map((contact) => contact.name)).toEqual([
+      "Анна Смирнова",
+    ]);
+
+    expect(await getUpcomingBirthdays(b, null, today)).toEqual([]);
+    expect(await getUpcomingBirthdays(b, tennisId, today)).toEqual([]);
+  });
+
   it("does not open a contact of another user", async () => {
     expect(await getContact(b, annaId)).toBeNull();
     expect(await getContactWithNotes(b, annaId)).toBeNull();
@@ -158,6 +180,20 @@ describe("a request with an id of another user changes nothing", () => {
     expect(await db.select().from(contactGroups)).toEqual([
       { contactId: annaId, groupId: tennisId },
     ]);
+  });
+
+  it("updateContactById does not change the birthday of another user's contact", async () => {
+    const before = await annaRow();
+
+    const updated = await updateContactById(
+      b,
+      annaId,
+      { name: "Анна", ...noFields, birthDay: 1, birthMonth: 1, birthYear: 2000 },
+      [],
+    );
+
+    expect(updated).toBe(false);
+    expect(await annaRow()).toEqual(before);
   });
 
   it("deleteContactById answers as for a missing contact", async () => {
@@ -188,5 +224,6 @@ describe("a new user starts with nothing", () => {
 
     expect(result).toEqual({ items: [], total: 0, groupTotal: 0 });
     expect(await getOverdueContacts(newcomer, null)).toEqual([]);
+    expect(await getUpcomingBirthdays(newcomer, null)).toEqual([]);
   });
 });

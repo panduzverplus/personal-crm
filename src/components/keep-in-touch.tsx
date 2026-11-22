@@ -1,4 +1,4 @@
-import { KeepInTouchList } from "@/components/keep-in-touch-list";
+import { ContactBlock } from "@/components/contact-block";
 import { getOverdueContacts } from "@/lib/contacts";
 import { overdueRowDetails } from "@/lib/keep-in-touch";
 
@@ -23,7 +23,9 @@ export async function KeepInTouch({
 
   return (
     // Another group is another set of people: the block starts collapsed again.
-    <KeepInTouchList
+    <ContactBlock
+      title="Пора связаться"
+      headingId="keep-in-touch-heading"
       key={groupId ?? "all"}
       listQuery={listQuery}
       rows={overdue.map((contact) => ({

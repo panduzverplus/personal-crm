@@ -57,6 +57,8 @@ export type SeedContact = {
   /** When the only note of the contact was written; no note when not set. */
   noteAt?: Date;
   group?: string;
+  /** The year may be left out, as in the app. */
+  birthday?: { day: number; month: number; year?: number };
 };
 
 /**
@@ -84,10 +86,18 @@ export async function seedContacts(
       groupIds.set(name, row.id);
     }
 
-    for (const { name, frequency, createdAt, noteAt, group } of people) {
+    for (const { name, frequency, createdAt, noteAt, group, birthday } of people) {
       const [row] = await db
         .insert(contacts)
-        .values({ ownerId: owner, name, contactFrequency: frequency, createdAt })
+        .values({
+          ownerId: owner,
+          name,
+          contactFrequency: frequency,
+          createdAt,
+          birthDay: birthday?.day,
+          birthMonth: birthday?.month,
+          birthYear: birthday?.year,
+        })
         .returning({ id: contacts.id });
       if (noteAt) {
         await db.insert(notes).values({ contactId: row.id, body: "Заметка", createdAt: noteAt });

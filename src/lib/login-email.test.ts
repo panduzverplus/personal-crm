@@ -59,6 +59,7 @@ describe("parseLoginEmail", () => {
       phone: "",
       email: value,
       contactFrequency: "",
+      birthday: "",
     });
 
     expect(parseLoginEmail(value).ok).toBe(contact.success);
