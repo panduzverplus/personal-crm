@@ -374,12 +374,14 @@ deploy-20261110-142530-e395423.dump
 Запускает cron пользователя `crmapp`: строка в его crontab (`CRON_TZ=Europe/Moscow`, `0 3 * * *`) вызывает
 `daily-backup.sh`. Если в этот момент идёт выкатка прода, бэкап ждёт её конца. Строку ставит сама выкатка прода
 (`install-backup-cron.sh`, повторный запуск ничего не дублирует), отдельно настраивать ничего не нужно.
-Нужен только установленный на сервере `cron` (на Ubuntu он есть; нет — выкатка скажет: `sudo apt install cron`).
+На сервере стоит `systemd-cron`: отдельного демона нет, crontab превращается в таймеры systemd. Выкатка проверяет, что
+команда `crontab` есть и планировщик работает (`cron.target`); иначе останавливается до всяких изменений.
 
 Проверить, что бэкап настроен и работает:
 
 ```bash
 ssh crm 'crontab -l'                              # строка с daily-backup.sh и CRON_TZ=Europe/Moscow
+ssh crm 'systemctl list-timers --all | grep -i cron'   # таймер crmapp: время ближайшего запуска (03:00 по Москве)
 ssh crm 'ls -lh ~/personal-crm/backups | grep daily'   # файлы daily-…-0000-….dump, по одному в сутки
 ssh crm 'tail -20 ~/personal-crm/backup-cron.log'      # журнал запусков, ошибки тоже здесь
 ssh crm 'bash ~/personal-crm/daily-backup.sh'          # снять такой бэкап прямо сейчас
