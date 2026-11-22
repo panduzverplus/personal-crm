@@ -2,19 +2,21 @@
 # Runs on the server: dumps the production database (pg_dump custom format) to
 #   backups/<kind>-<UTC time>-<short SHA>.dump
 # where the SHA is the version running now (current-image), "none" before the first deploy.
-# Usage: backup.sh [manual|deploy|before-restore]   (default: manual)
+# Usage: backup.sh [manual|deploy|daily|before-restore]   (default: manual)
 #   manual          started by hand: ssh crm 'bash ~/personal-crm/backup.sh'; never deleted automatically
-#   deploy          started by deploy.sh before migrations; deploy.sh keeps only the newest of them
+#   deploy          started by deploy.sh before migrations; only the newest KEEP_BACKUPS of them are kept
+#   daily           started by cron through daily-backup.sh; only the newest KEEP_BACKUPS of them are kept
 #   before-restore  started by restore.sh before it drops the database; never deleted automatically
 # Prints the backup path as the only line on stdout; progress goes to stderr.
 # Credentials come from the crm-db container environment, the script never reads .env.
 set -euo pipefail
 
 KIND="${1:-manual}"
+KEEP_BACKUPS=7
 case "$KIND" in
-  manual | deploy | before-restore) ;;
+  manual | deploy | daily | before-restore) ;;
   *)
-    echo "usage: backup.sh [manual|deploy|before-restore]" >&2
+    echo "usage: backup.sh [manual|deploy|daily|before-restore]" >&2
     exit 1
     ;;
 esac
@@ -53,4 +55,11 @@ if ! (
 fi
 mv "$file.partial" "$file"
 echo "$file ($(du -h "$file" | cut -f1))"
+
+# Only after a good backup exists: keep the newest KEEP_BACKUPS files of the kinds that rotate.
+# Names start with the kind and the UTC time, so sorting by name is sorting by age.
+# manual-* and before-restore-* are never deleted here.
+if [ "$KIND" = deploy ] || [ "$KIND" = daily ]; then
+  find "$BACKUP_DIR" -maxdepth 1 -name "$KIND-*.dump" | sort -r | tail -n +$((KEEP_BACKUPS + 1)) | xargs -r rm -f --
+fi
 echo "$file" >&3

@@ -1,7 +1,7 @@
 # Push to main: build the image tagged with the commit SHA, push it to GHCR, then deploy it to the
-# test stand and to prod. The two deploys run side by side and do not depend on each other: a red
-# stand does not stop prod (for now; prod will later be rolled out by hand, after the stand).
-name: Deploy
+# test stand. Prod is never deployed from here: it is rolled out by hand with the "Deploy prod" workflow,
+# and only a SHA that has a green run of this workflow (the history of stand deploys) can go there.
+name: Deploy staging
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
 # reach the server in the order of the merges. A deploy of one environment is also locked on the
 # server itself (deploy.sh), for runs that do not come from this workflow.
 concurrency:
-  group: deploy
+  group: deploy-staging
   cancel-in-progress: false
 
 permissions:
@@ -39,6 +39,9 @@ jobs:
           context: .
           push: true
           tags: ${{ env.IMAGE }}
+          # One tag = one package version in GHCR (no untagged attestation manifests next to it),
+          # so cleaning old versions after a prod deploy cannot break a live image.
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -52,24 +55,6 @@ jobs:
 
       - name: Deploy to the test stand
         run: bash deploy/ci-deploy.sh staging
-        env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
-          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          GHCR_USER: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  prod:
-    needs: build
-    runs-on: ubuntu-24.04
-    env:
-      IMAGE: ghcr.io/${{ github.repository }}:${{ github.sha }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Deploy to prod
-        run: bash deploy/ci-deploy.sh prod
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
           DEPLOY_USER: ${{ vars.DEPLOY_USER }}
