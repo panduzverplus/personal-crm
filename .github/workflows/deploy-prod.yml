@@ -1,0 +1,75 @@
+# Prod is rolled out only from here, by hand: Actions -> Deploy prod -> Run workflow.
+#   sha empty    the commit of the last green "Deploy staging" run (what is on the stand now or was there last)
+#   sha given    that commit, a fallback; it must have a green "Deploy staging" run, otherwise the run fails
+#                before anything is changed
+#   rollback     the version that ran on prod before the current one (the server remembers it);
+#                the stand is not checked and the sha field is ignored
+# The image is the one the stand got: it is built once, in "Deploy staging".
+# The SHA that went out is in the run summary. All logic is in deploy/*.sh, the workflow only calls it.
+name: Deploy prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA to roll out. Empty: the last green stand deploy. Ignored when rollback is ticked"
+        type: string
+        required: false
+        default: ""
+      rollback:
+        description: "Rollback: go back to the previous prod version"
+        type: boolean
+        default: false
+
+# Prod deploys go one at a time (the server also locks them in deploy.sh).
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+  actions: read
+
+jobs:
+  deploy:
+    # Scripts come from main: running from another branch is refused.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Pick the version and check it passed the test stand
+        id: resolve
+        if: ${{ !inputs.rollback }}
+        run: bash deploy/ci-resolve-sha.sh
+        env:
+          SHA_INPUT: ${{ inputs.sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to prod
+        run: bash deploy/ci-deploy.sh prod ${{ inputs.rollback && '--rollback' || '' }}
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}:${{ steps.resolve.outputs.sha }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Only after a forward deploy: GHCR keeps the 10 newest builds. A red job here does not mean prod failed.
+  cleanup-ghcr:
+    needs: deploy
+    if: ${{ !inputs.rollback }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Delete old images from GHCR
+        run: bash deploy/ci-cleanup-ghcr.sh
+        env:
+          KEEP_SHA: ${{ needs.deploy.outputs.sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

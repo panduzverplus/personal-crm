@@ -3,11 +3,13 @@
 # image, smoke-check /health. One script for both environments, the environment is the first argument.
 # Usage: deploy.sh <prod|staging> <image> [--pull]
 #   --pull  read a GHCR token from stdin and pull the image (used by CI)
-#   without --pull the image must already be on the server, e.g. a manual rollback of prod:
+#   without --pull the image must already be on the server: the "Deploy prod" rollback does it this way
+#   (ci-deploy.sh prod --rollback), and so can you by hand:
 #   bash ~/personal-crm/deploy.sh prod "$(cat ~/personal-crm/previous-image)"
-# prod:    backup (backup.sh deploy) -> migrations -> new image -> smoke -> clean old images.
+# prod:    daily backup cron (install-backup-cron.sh) -> backup (backup.sh deploy) -> migrations -> new image
+#          -> smoke -> clean old images.
 #          The backup is named after the version that was running before this deploy:
-#          backups/deploy-<UTC time>-<short SHA>.dump; only the newest KEEP_BACKUPS of them are kept.
+#          backups/deploy-<UTC time>-<short SHA>.dump; backup.sh keeps only the newest 7 of them.
 # staging: migrations -> new image -> smoke. No backup (the stand's database is a copy that can be made
 #          again, see refresh-staging-db.sh) and no image cleanup (prod's deploy does it).
 # Two deploys of one environment never run at once: the second waits for the first.
@@ -18,7 +20,6 @@ export DEPLOY_ENV="${1:?usage: deploy.sh <prod|staging> <image> [--pull]}"
 IMAGE="${2:?usage: deploy.sh <prod|staging> <image> [--pull]}"
 PULL="${3:-}"
 REPOSITORY="${IMAGE%:*}"
-KEEP_BACKUPS=7
 KEEP_IMAGE_DAYS=14
 LOCK_WAIT_SECONDS=1800
 cd "$(dirname "$0")"
@@ -50,6 +51,10 @@ elif ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
 fi
 
 if [ "$DEPLOY_ENV" = prod ]; then
+  # The daily backup (03:00 Moscow) is set up by the deploy itself: no sudo, safe to repeat. Before anything
+  # is changed, so a server without cron stops the deploy here and not half-way.
+  bash ./install-backup-cron.sh
+
   # Before migrations: if they damage data, this file holds the database as the running version left it.
   # A failed backup stops the deploy. IMAGE is passed for the very first deploy, when current-image is missing.
   IMAGE="$IMAGE" bash ./backup.sh deploy >/dev/null
@@ -91,12 +96,6 @@ if [ "$DEPLOY_ENV" = prod ]; then
         docker image rm "$old"
       fi
     done
-
-  step "Keep only the newest $KEEP_BACKUPS deploy backups"
-  # Names start with the UTC time, so sorting by name is sorting by age.
-  # Manual backups (manual-*.dump) and copies made by restore.sh (before-restore-*.dump) are never deleted here.
-  find "$BACKUP_DIR" -maxdepth 1 -name 'deploy-*.dump' | sort -r | tail -n +$((KEEP_BACKUPS + 1)) | xargs -r rm -f --
-  ls -1 "$BACKUP_DIR"
 fi
 
 echo
