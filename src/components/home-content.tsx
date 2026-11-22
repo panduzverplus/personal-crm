@@ -1,8 +1,10 @@
+import { CircleCheckIcon } from "lucide-react";
 import { ContactList } from "@/components/contact-list";
 import { ContactSearch } from "@/components/contact-search";
 import { GroupFilter } from "@/components/group-filter";
 import { KeepInTouch } from "@/components/keep-in-touch";
 import { ListControlsProvider } from "@/components/list-controls";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 import { listGroups } from "@/lib/groups";
 import { listQueryString, parseListParams } from "@/lib/list-params";
 import { requireUser } from "@/lib/session";
@@ -17,13 +19,21 @@ export async function HomeContent({
   searchParams: PageProps<"/">["searchParams"];
 }) {
   const user = await requireUser();
-  const { group: groupId, q } = parseListParams(await searchParams);
+  const params = await searchParams;
+  const { group: groupId, q } = parseListParams(params);
   const groups = await listGroups(user.id);
   // A group in the address that does not exist or is someone else's counts as "Все".
   const group = groups.find((item) => item.id === groupId) ?? null;
 
   return (
     <ListControlsProvider group={group?.id ?? null} query={q}>
+      {/* On top, not in the list: under "Пора связаться" it falls below the first screen. */}
+      {params.deleted === "1" && (
+        <Alert variant="success">
+          <CircleCheckIcon />
+          <AlertTitle>Контакт удалён</AlertTitle>
+        </Alert>
+      )}
       <GroupFilter groups={groups} activeGroup={group?.id ?? null} query={q} />
       <KeepInTouch
         userId={user.id}

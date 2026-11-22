@@ -217,7 +217,17 @@ test("a deleted contact leaves the block", async ({ page }) => {
   await page.getByRole("button", { name: "Удалить" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Удалить" }).click();
 
-  await expect(visibleText(page, "Контакт «Анна» удалён")).toBeVisible();
+  await expect(visibleText(page, "Контакт удалён")).toBeVisible();
+  // The message is above the block: below it, on a long page, it falls under the first screen.
+  const messageBox = await page
+    .getByRole("alert")
+    .filter({ hasText: "Контакт удалён" })
+    .boundingBox();
+  const blockBox = await block(page).boundingBox();
+  expect(messageBox!.y).toBeLessThan(blockBox!.y);
+  // The address goes to the server log, so it must not carry the name of the deleted contact.
+  await expect(page).toHaveURL(/\/\?deleted=1$/);
+  expect(decodeURIComponent(page.url())).not.toContain("Анна");
   await expect(block(page).getByText("1 контакт")).toBeVisible();
   await expect(blockRows(page)).toHaveText([/Иван/]);
 });
