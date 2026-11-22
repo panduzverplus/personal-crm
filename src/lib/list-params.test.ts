@@ -114,13 +114,11 @@ describe("pathWithListParams", () => {
   });
 
   it("starts the query with a question mark when only extra parameters are given", () => {
-    expect(pathWithListParams("/", { group: null, q: "" }, { deleted: "Анна" })).toBe(
-      `/?deleted=${encodeURIComponent("Анна")}`,
-    );
+    expect(pathWithListParams("/", { group: null, q: "" }, { deleted: "1" })).toBe("/?deleted=1");
   });
 
   it("encodes extra values", () => {
-    const path = pathWithListParams("/", { group: null, q: "" }, { deleted: "а&б #1" });
-    expect(new URLSearchParams(path.slice(2)).get("deleted")).toBe("а&б #1");
+    const path = pathWithListParams("/", { group: null, q: "" }, { extra: "а&б #1" });
+    expect(new URLSearchParams(path.slice(2)).get("extra")).toBe("а&б #1");
   });
 });

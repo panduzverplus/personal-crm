@@ -161,7 +161,8 @@ export async function deleteContact(
   // Already deleted (e.g. in another tab): the contact is gone either way, so no message.
   // The same list opens again, with its group and search.
   const list = readListParams(listParams);
-  redirect(pathWithListParams("/", list, name === null ? {} : { deleted: name }));
+  // The message has no name: the address goes to the server log, so it must not carry personal data.
+  redirect(pathWithListParams("/", list, name === null ? {} : { deleted: "1" }));
 }
 
 export async function addNote(

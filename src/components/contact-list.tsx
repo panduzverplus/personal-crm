@@ -32,22 +32,13 @@ export async function ContactList({
   const params = await searchParams;
   const listQuery = listQueryString({ group: group?.id ?? null, q: query });
   const addedId = Number(firstValue(params.added));
-  const deletedName = (firstValue(params.deleted) ?? "").trim();
 
   const { items, total, groupTotal } = await searchContacts(userId, query, group?.id ?? null);
   const added = query ? undefined : items.find((contact) => contact.id === addedId);
 
-  const deletedAlert = deletedName && (
-    <Alert variant="success">
-      <CircleCheckIcon />
-      <AlertTitle className="break-words">Контакт «{deletedName}» удалён</AlertTitle>
-    </Alert>
-  );
-
   if (total === 0) {
     return (
       <div className="flex flex-col gap-3">
-        {deletedAlert}
         <div className="flex flex-col items-center gap-5 rounded-card border px-6 py-12 text-center">
           <BigLetter />
           <p className="text-muted-foreground">Пока нет ни одного контакта.</p>
@@ -66,7 +57,6 @@ export async function ContactList({
   if (group && groupTotal === 0) {
     return (
       <div className="flex flex-col gap-3">
-        {deletedAlert}
         <div className="rounded-card border px-6 py-10 text-center text-muted-foreground">
           В группе «{group.name}» пока никого нет.
         </div>
@@ -76,7 +66,6 @@ export async function ContactList({
 
   return (
     <div className="flex flex-col gap-3">
-      {deletedAlert}
       {added && (
         <>
           <Alert variant="success">
