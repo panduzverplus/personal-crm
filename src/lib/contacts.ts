@@ -1,8 +1,9 @@
 import "server-only";
-import { and, count, desc, eq, inArray, isNotNull, max, sql, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, max, or, sql, type SQL } from "drizzle-orm";
 import { connection } from "next/server";
 import { db } from "@/db";
 import { contactGroups, contacts, groups, notes, type NewContact } from "@/db/schema";
+import { birthdayFromColumns, birthdayWindow, isLeapYear, matchWindow } from "@/lib/birthday";
 import type { ContactInput } from "@/lib/contact-form";
 import { dueDate, isOverdue } from "@/lib/keep-in-touch";
 
@@ -128,6 +129,61 @@ export async function getOverdueContacts(userId: string, groupId: number | null)
 }
 
 export type OverdueContact = Awaited<ReturnType<typeof getOverdueContacts>>[number];
+
+/**
+ * Contacts of the user whose birthday is today or in the next 7 days: the nearest first,
+ * the same day by name. With a group, only its contacts. `today` is a parameter for tests.
+ */
+export async function getUpcomingBirthdays(
+  userId: string,
+  groupId: number | null,
+  today: Date = new Date(),
+) {
+  await connection();
+
+  const window = birthdayWindow(today);
+  // The database only narrows by day and month; the window then works out the day and the age.
+  const days = window.map(({ month, day }) => [month, day]);
+  // No February 29 in this year: such a birthday is on February 28, so look for it too.
+  if (
+    window.some(
+      ({ date, month, day }) => month === 2 && day === 28 && !isLeapYear(date.getFullYear()),
+    )
+  ) {
+    days.push([2, 29]);
+  }
+
+  const rows = await db
+    .select({
+      id: contacts.id,
+      name: contacts.name,
+      birthDay: contacts.birthDay,
+      birthMonth: contacts.birthMonth,
+      birthYear: contacts.birthYear,
+    })
+    .from(contacts)
+    .where(
+      and(
+        eq(contacts.ownerId, userId),
+        or(
+          ...days.map(([month, day]) =>
+            and(eq(contacts.birthMonth, month), eq(contacts.birthDay, day)),
+          ),
+        ),
+        groupId === null ? undefined : isInGroup(userId, groupId),
+      ),
+    );
+
+  return rows
+    .flatMap(({ id, name, ...columns }) => {
+      const birthday = birthdayFromColumns(columns);
+      const match = birthday && matchWindow(birthday, window);
+      return match ? [{ id, name, ...match }] : [];
+    })
+    .sort((a, b) => a.daysAhead - b.daysAhead || a.name.localeCompare(b.name, "ru"));
+}
+
+export type UpcomingBirthday = Awaited<ReturnType<typeof getUpcomingBirthdays>>[number];
 
 /** Turns the `[id]` URL segment into a contact id, or null if it is not a valid id. */
 export function parseContactId(rawId: string) {

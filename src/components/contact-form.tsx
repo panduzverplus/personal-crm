@@ -18,6 +18,9 @@ type FieldConfig = {
   label: string;
   placeholder?: string;
   type?: "text" | "tel" | "email";
+  inputMode?: "numeric";
+  // A line under the field that tells how to fill it in.
+  hint?: string;
   multiline?: boolean;
   // Makes the field a dropdown with these options.
   options?: { value: string; label: string }[];
@@ -43,8 +46,21 @@ const FIELDS: FieldConfig[] = [
   },
   { name: "phone", label: "Телефон", placeholder: "+7 900 000-00-00", type: "tel" },
   { name: "email", label: "Почта", placeholder: "name@example.com", type: "email" },
+  {
+    name: "birthday",
+    label: "День рождения",
+    placeholder: "14.03.1990",
+    inputMode: "numeric",
+    hint: "Например, 14.03 или 14.03.1990: год можно не указывать",
+  },
   { name: "contactFrequency", label: "Как часто общаться", options: FREQUENCY_OPTIONS },
 ];
+
+/** The ids of the hint and the error under a field, for `aria-describedby`. */
+function describedBy(id: string, error: string | undefined, hint: string | undefined) {
+  const ids = [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean);
+  return ids.length > 0 ? ids.join(" ") : undefined;
+}
 
 /** Used both to add a new contact and to edit an existing one. */
 export function ContactForm({
@@ -74,7 +90,7 @@ export function ContactForm({
           name: field.name,
           defaultValue: state.values[field.name],
           "aria-invalid": error ? true : undefined,
-          "aria-describedby": error ? `${id}-error` : undefined,
+          "aria-describedby": describedBy(id, error, field.hint),
         };
         return (
           <div key={field.name} className="flex flex-col gap-2">
@@ -105,10 +121,16 @@ export function ContactForm({
                 {...commonProps}
                 placeholder={field.placeholder}
                 type={field.type ?? "text"}
+                inputMode={field.inputMode}
                 required={field.required}
                 autoFocus={field.name === "name"}
                 autoComplete="off"
               />
+            )}
+            {field.hint && (
+              <p id={`${id}-hint`} className="text-sm text-muted-foreground">
+                {field.hint}
+              </p>
             )}
             {error && (
               <p id={`${id}-error`} className="text-sm text-destructive">

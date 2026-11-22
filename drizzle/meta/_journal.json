@@ -43,6 +43,13 @@
       "when": 1794423456590,
       "tag": "0005_owner_ids",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795358754967,
+      "tag": "0006_birthdays",
+      "breakpoints": true
     }
   ]
 }

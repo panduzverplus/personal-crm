@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { birthdayFromColumns, formatBirthdayInput, parseBirthday } from "@/lib/birthday";
 import { isValidEmail } from "@/lib/email";
 import { contactFrequencies } from "@/lib/keep-in-touch";
 import { parseGroupId } from "@/lib/list-params";
@@ -12,22 +13,39 @@ const optionalText = (max: number, tooLongMessage: string) =>
     .max(max, tooLongMessage)
     .transform((value) => value || null);
 
-export const contactSchema = z.object({
-  name: z.string().trim().min(1, "Укажите имя").max(200, "Имя не длиннее 200 символов"),
-  about: optionalText(500, "Не длиннее 500 символов"),
-  howWeMet: optionalText(500, "Не длиннее 500 символов"),
-  phone: optionalText(50, "Телефон не длиннее 50 символов"),
-  email: z
-    .string()
-    .trim()
-    .max(200, "Почта не длиннее 200 символов")
-    .refine((value) => value === "" || isValidEmail(value), "Похоже, в адресе почты ошибка")
-    .transform((value) => value || null),
-  // An empty value is the "not set" option.
-  contactFrequency: z
-    .enum(["", ...contactFrequencies], "Выберите вариант из списка")
-    .transform((value) => value || null),
-});
+export const contactSchema = z
+  .object({
+    name: z.string().trim().min(1, "Укажите имя").max(200, "Имя не длиннее 200 символов"),
+    about: optionalText(500, "Не длиннее 500 символов"),
+    howWeMet: optionalText(500, "Не длиннее 500 символов"),
+    phone: optionalText(50, "Телефон не длиннее 50 символов"),
+    email: z
+      .string()
+      .trim()
+      .max(200, "Почта не длиннее 200 символов")
+      .refine((value) => value === "" || isValidEmail(value), "Похоже, в адресе почты ошибка")
+      .transform((value) => value || null),
+    // An empty value is the "not set" option.
+    contactFrequency: z
+      .enum(["", ...contactFrequencies], "Выберите вариант из списка")
+      .transform((value) => value || null),
+    // "ДД.ММ" or "ДД.ММ.ГГГГ"; an empty value means no birthday.
+    birthday: z.string().transform((value, ctx) => {
+      const parsed = parseBirthday(value);
+      if (!parsed.ok) {
+        ctx.issues.push({ code: "custom", message: parsed.message, input: value });
+        return z.NEVER;
+      }
+      return parsed.birthday;
+    }),
+  })
+  // The three columns of the contacts table, so the result can be saved as it is.
+  .transform(({ birthday, ...contact }) => ({
+    ...contact,
+    birthDay: birthday?.day ?? null,
+    birthMonth: birthday?.month ?? null,
+    birthYear: birthday?.year ?? null,
+  }));
 
 export type ContactInput = z.output<typeof contactSchema>;
 
@@ -38,6 +56,7 @@ export const contactFields = [
   "phone",
   "email",
   "contactFrequency",
+  "birthday",
 ] as const;
 
 export type ContactField = (typeof contactFields)[number];
@@ -59,6 +78,7 @@ export const emptyContactForm: ContactFormState = {
     phone: "",
     email: "",
     contactFrequency: "",
+    birthday: "",
   },
   groupIds: [],
   errors: {},
@@ -66,7 +86,11 @@ export const emptyContactForm: ContactFormState = {
 
 /** Pre-fills the form with a saved contact (empty fields are stored as null) and its groups. */
 export function contactFormFrom(
-  contact: Record<ContactField, string | null>,
+  contact: Record<Exclude<ContactField, "birthday">, string | null> & {
+    birthDay: number | null;
+    birthMonth: number | null;
+    birthYear: number | null;
+  },
   groupIds: number[],
 ): ContactFormState {
   return {
@@ -77,6 +101,7 @@ export function contactFormFrom(
       phone: contact.phone ?? "",
       email: contact.email ?? "",
       contactFrequency: contact.contactFrequency ?? "",
+      birthday: formatBirthdayInput(birthdayFromColumns(contact)),
     },
     groupIds,
     errors: {},

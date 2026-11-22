@@ -11,6 +11,7 @@ import { NoteForm } from "@/components/note-form";
 import { NoteItem } from "@/components/note-item";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
+import { birthdayFromColumns, formatBirthdayLong } from "@/lib/birthday";
 import { getContactWithNotes, parseContactId } from "@/lib/contacts";
 import { formatDate, formatDateTime, pluralize } from "@/lib/format";
 import { keepInTouchStatus } from "@/lib/keep-in-touch";
@@ -51,6 +52,7 @@ async function ContactCard({
     notFound();
   }
   const { contact, notes, groups } = data;
+  const birthday = birthdayFromColumns(contact);
 
   return (
     <>
@@ -110,6 +112,7 @@ async function ContactCard({
               </a>
             )}
           </Detail>
+          <Detail label="День рождения">{birthday && formatBirthdayLong(birthday)}</Detail>
           <Detail label="Группы" wide>
             {groups.map((group) => group.name).join(" · ")}
           </Detail>
